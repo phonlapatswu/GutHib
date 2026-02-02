@@ -36,16 +36,16 @@
 -Project Organization Compliance: ระบบต้องรองรับการจัดระเบียบงานด้วย Label, Priority, และ Milestone เพื่อให้การทำงานร่วมกันมีประสิทธิภาพ.
 -Security (Access Control): ต้องมีการจัดการสิทธิ์ในการเข้าถึง (Role-based Access) โดยเฉพาะการอนุญาตให้ อาจารย์และ TA เข้าถึงโปรเจกต์เพื่อตรวจงานได้.
 
-Use Case Diagram
+## Use Case Diagram
 -Requester: Create Project, Split Tasks, Review Work, View Analytics
 -Worker: Search Tasks, Claim Task, Submit Work, View Personal Stats
 -Admin (TA/Professor): View Project Progress, Access All Data
 
-Core Use Cases:
+## Core Use Cases:
 -การกระจายงาน (Task Splitting): เมื่อมีงานใหญ่เข้ามา Requester จะใช้ระบบแตกเป็นงานย่อย (Sub-tasks) ซึ่งหลังบ้านจะถูกจัดเก็บด้วยโครงสร้างข้อมูลแบบ Tree
 -การรับและส่งงาน (The Workflow): Worker กดรับงาน -> สถานะเปลี่ยนเป็น In Progress -> ส่งงาน -> เข้าสู่สถานะ Review เพื่อให้ Requester ตัดสินใจว่าจะ Merge (เสร็จสิ้น) หรือ Request Changes (ต้องแก้ไข)
 
-กระบวนการทำงาน (Process, Methods, and Tools)
+## กระบวนการทำงาน (Process, Methods, and Tools)
 เราใช้กระบวนการพัฒนาแบบ Agile (Scrum Framework) แบ่งการทำงานเป็น Sprints
 Process: Weekly Stand-up meeting, Sprint Planning, Retrospective
 Design Tools: Figma (สำหรับ UI/UX)
