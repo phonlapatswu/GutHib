@@ -11,7 +11,8 @@
 
 
 ## ขอบเขตของ Project (Scope)
--ระบบผู้ใช้งาน: รองรับผู้ใช้งาน 2 กลุ่มหลัก คือ ผู้สั่งงาน (Requester) และ ผู้รับผิดชอบงาน (Worker)
+-ระบบผู้ใช้งาน: รองรับผู้ใช้งาน 2 กลุ่มหลัก คือ ผู้สั่งงาน (Requester) และ ผู้รับผิดชอบงาน (Worker)![IMG_8784](https://github.com/user-attachments/assets/a9f19368-fa87-4b46-9b28-51d20babf040)
+
 -การจัดการงาน: สามารถสร้างโปรเจกต์หลัก และซอยย่อยเป็น Issue/Task ได้
 -ระบบสถานะ: งานจะมีสถานะ Open, In Progress, Review , และ Closed
 -การแสดงผล: รองรับการทำงานบน Web Browser (Responsive Design สำหรับ Mobile)
@@ -65,7 +66,13 @@ Video:https://youtu.be/vkzCbIviAh4?si=ToOB4ghBk_POxdea
 Project Management Screenshots (GitHub Projects)
 
 9.1 Product Backlog
+![IMG_8784](https://github.com/user-attachments/assets/083fe084-2ca7-4f42-87c1-3080b6ebfe6e)
+
 
 9.2 Sprint Backlog (Sprint 1)
+![IMG_8785](https://github.com/user-attachments/assets/a66f7f1c-12f6-4b1c-bd57-fe30bb65cf4c)
+
 
 9.3 Example of Issue Detail
+![IMG_8786](https://github.com/user-attachments/assets/99f19435-173e-4e21-aa57-d0e2a2602d5c)
+
