@@ -55,11 +55,11 @@ Communication: Discord / Microsoft Teams
 
 
 สรุปขั้นตอนการทำ Requirement (Requirement Gathering)
-🎥 Interview Video: 
+🎥 Interview Video: https://youtu.be/NaG_dEiouVI?si=Y6V9zp6aQH_B4za8
 
 
 สรุปการประชุม Retrospective
-Video:
+Video:https://youtu.be/vkzCbIviAh4?si=ToOB4ghBk_POxdea
 
 
 Project Management Screenshots (GitHub Projects)
