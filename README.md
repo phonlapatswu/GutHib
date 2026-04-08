@@ -6,19 +6,20 @@
 
 ## ขั้นตอนที่ 1: เตรียมโปรแกรมสำหรับฐานข้อมูล (PostgreSQL)
 โปรเจกต์นี้ใช้ PostgreSQL เป็นฐานข้อมูลหลัก ดังนั้นคุณต้องมีตัวรันฐานข้อมูลในเครื่องก่อน
-1. สำหรับ **Mac**: แนะนำให้ดาวน์โหลดและติดตั้งแอป **[Postgres.app](https://postgresapp.com/)** (กดโหลด > ลากเข้า Applications > เปิดแอปและกดปุ่ม "Start")
-2. เมื่อเปิดแล้ว เปิด Terminal แล้วพิมพ์คำสั่งสร้างฐานข้อมูลเปล่าๆ สำหรับโปรเจกต์นี้:
-   ```bash
-   createdb sharktask
-   ```
+- 🍏 **สำหรับ Mac**: แนะนำให้ดาวน์โหลดและติดตั้งแอป **[Postgres.app](https://postgresapp.com/)** (กดโหลด > ลากเข้า Applications > เปิดแอปและกดปุ่ม "Start") เมื่อแอปทำงานแล้วสามารถเปิด Terminal พิมพ์คำสั่ง `createdb sharktask` ได้เลย
+- 🪟 **สำหรับ Windows**: แนะนำให้ดาวน์โหลดตัวติดตั้งจาก **[PostgreSQL Official](https://www.postgresql.org/download/windows/)** (ตอนติดตั้งให้จำรหัสผ่านที่ตั้งเอาไว้ให้ดีดัวย) จากนั้นเปิดโปรแกรม pgAdmin 4 ที่แถมมาด้วย > คลิกขวาที่ Databases > Create > Database... > ตั้งชื่อว่า `sharktask`
 
 ## ขั้นตอนที่ 2: ตั้งค่าไฟล์ .env (เชื่อมต่อ Database)
-1. เปิดไฟล์ `/backend/.env` (ที่คุณกำลังเปิดอยู่)
-2. แก้ไขบรรทัดล่างสุด (`DATABASE_URL`) ให้ชี้ไปที่ฐานข้อมูลของคุณ หากคุณติดตั้งผ่าน Postgres.app ใน Mac ส่วนใหญ่จะตั้งค่าเป็นดังนี้:
-   ```env
-   DATABASE_URL="postgresql://localhost:5432/sharktask?schema=public"
-   ```
-   *(หมายเหตุ: หากคุณตั้ง Username/Password ใน PostgreSQL แยกต่างหาก ให้ใช้รูปแบบ `postgresql://USER:PASS@localhost:5432/sharktask?schema=public`)*
+1. เปิดไฟล์ `/backend/.env` 
+2. แก้ไขบรรทัดล่างสุด (`DATABASE_URL`) ให้ชี้ไปที่ฐานข้อมูลของคุณ 
+   - 🍏 **สำหรับ Mac (ที่ใช้ Postgres.app):** ส่วนใหญ่เสียบแล้วใช้ได้เลย
+     ```env
+     DATABASE_URL="postgresql://localhost:5432/sharktask?schema=public"
+     ```
+   - 🪟 **สำหรับ Windows (หรือใช้ Docker / มีการตั้งรหัสผ่าน):** ต้องใส่ Username (ค่าเริ่มต้นมักเป็น `postgres`) และรหัสผ่านของคุณด้วย
+     ```env
+     DATABASE_URL="postgresql://postgres:รหัสผ่านของคุณ@localhost:5432/sharktask?schema=public"
+     ```
 
 ## ขั้นตอนที่ 3: ติดตั้ง Dependencies ทั้งระบบ 
 1. เปิดแอพพลิเคชั่น Terminal 
