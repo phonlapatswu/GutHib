@@ -7,29 +7,32 @@ datasource db {
 }
 
 model User {
-  user_id       Int          @id @default(autoincrement())
-  username      String       @unique @db.VarChar(50)
+  user_id       Int             @id @default(autoincrement())
+  username      String          @unique @db.VarChar(50)
   password_hash String
-  email         String       @unique @db.VarChar(255)
-  role          user_role    @default(Worker)
-  created_at    DateTime     @default(now()) @db.Timestamptz(6)
+  email         String          @unique @db.VarChar(255)
+  role          user_role       @default(Worker)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
   commits       CommitLog[]
   projects      Project[]
   submissions   Submission[]
   tasks         Task[]
+  messages      Message[]
+  memberships   ProjectMember[]
 
   @@map("users")
 }
 
 model Project {
-  project_id  Int            @id @default(autoincrement())
+  project_id  Int             @id @default(autoincrement())
   owner_id    Int
-  title       String         @db.VarChar(255)
+  title       String          @db.VarChar(255)
   description String?
-  status      project_status @default(Active)
-  created_at  DateTime       @default(now()) @db.Timestamptz(6)
-  owner       User           @relation(fields: [owner_id], references: [user_id], onUpdate: NoAction)
+  status      project_status  @default(Active)
+  created_at  DateTime        @default(now()) @db.Timestamptz(6)
+  owner       User            @relation(fields: [owner_id], references: [user_id], onUpdate: NoAction)
   tasks       Task[]
+  members     ProjectMember[]
 
   @@index([owner_id], map: "idx_projects_owner")
   @@index([status], map: "idx_projects_status")
@@ -125,4 +128,27 @@ enum user_role {
   Requester
   Worker
   Admin
+}
+
+model Message {
+  message_id Int      @id @default(autoincrement())
+  sender_id  Int
+  text       String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  sender     User     @relation(fields: [sender_id], references: [user_id], onDelete: Cascade)
+
+  @@index([created_at(sort: Desc)])
+  @@map("messages")
+}
+
+model ProjectMember {
+  id         Int      @id @default(autoincrement())
+  project_id Int
+  user_id    Int
+  joined_at  DateTime @default(now()) @db.Timestamptz(6)
+  project    Project  @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([project_id, user_id])
+  @@map("project_members")
 }

@@ -1,7 +1,47 @@
+"use client";
+
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Triangle } from 'lucide-react';
+import Cookies from 'js-cookie';
+import api from '@/lib/api';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await api.post('/auth/login', {
+        username,
+        password,
+      });
+
+      const { token } = response.data;
+      
+      // Store token securely in cookies
+      Cookies.set('token', token, { expires: 7 }); // Expires in 7 days
+      
+      // Redirect to dashboard
+      router.push('/');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(
+        err.response?.data?.error || 'An unexpected error occurred. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div 
       className="min-h-screen w-full flex items-center justify-end p-4 md:p-12"
@@ -23,11 +63,20 @@ export default function LoginPage() {
 
         <h2 className="text-6xl font-black mb-12 uppercase">LOGIN</h2>
 
-        <form className="w-full space-y-6">
+        <form onSubmit={handleLogin} className="w-full space-y-6">
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">
+              {error}
+            </div>
+          )}
+
           <div>
             <input 
-              type="email" 
-              placeholder="Email address"
+              type="text" 
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
               className="w-full border border-gray-300 rounded-full px-6 py-4 outline-none focus:border-[#5EE1CD] transition-colors"
             />
           </div>
@@ -36,15 +85,24 @@ export default function LoginPage() {
             <input 
               type="password" 
               placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
               className="w-full border border-gray-300 rounded-full px-6 py-4 outline-none focus:border-[#5EE1CD] transition-colors"
             />
           </div>
 
           <button 
-            type="button"
-            className="w-full bg-[#5EE1CD] text-white font-bold text-xl rounded-full py-4 mt-8 hover:bg-[#4bc7b4] transition-colors shadow-lg shadow-[#5EE1CD]/30"
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-[#5EE1CD] text-white font-bold text-xl rounded-full py-4 mt-8 hover:bg-[#4bc7b4] transition-colors shadow-lg shadow-[#5EE1CD]/30 disabled:opacity-70 flex justify-center items-center"
           >
-            LOGIN
+            {isLoading ? (
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : "LOGIN"}
           </button>
         </form>
 

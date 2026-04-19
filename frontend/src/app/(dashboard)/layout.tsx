@@ -1,70 +1,144 @@
+"use client";
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Triangle, ChevronDown } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Triangle, ChevronDown, LogOut, Settings, Shield } from 'lucide-react';
+import api from '@/lib/api';
+import Cookies from 'js-cookie';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+interface Project { project_id: number; title: string; }
+interface CurrentUser { user_id: number; username: string; role: string; }
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [projectsRes, userRes] = await Promise.all([
+          api.get('/projects'),
+          api.get('/auth/me'),
+        ]);
+        setProjects(projectsRes.data);
+        setCurrentUser(userRes.data);
+      } catch (error) {
+        console.error("Failed to fetch sidebar data", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleLogout = () => {
+    Cookies.remove('token');
+    router.push('/login');
+  };
+
+  const navItems = [
+    { label: 'Home', path: '/' },
+    { label: 'My Task', path: '/tasks' },
+    { label: 'Inbox', path: '/inbox' },
+    { label: 'Message', path: '/message' },
+    { label: 'Analytics', path: '/analytics' },
+  ];
+
   return (
-    <div className="flex h-screen w-full bg-[#f9f9f9] text-gray-900 font-sans">
-      
+    <div
+      className="flex h-screen w-full text-black font-sans p-4 md:p-6 gap-6"
+      style={{
+        backgroundImage: 'url("/shark_bg.png")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       {/* Sidebar */}
-      <aside className="w-64 bg-[#f9f9f9] border-r border-gray-200 flex flex-col pt-8 pb-4">
-        
+      <aside className="hidden md:flex w-72 bg-white/95 backdrop-blur-3xl border-4 border-[#3B82F6]/30 rounded-[40px] shadow-2xl flex-col pt-10 pb-4 h-full relative overflow-hidden">
+
         {/* Logo */}
-        <div className="flex items-center gap-2 px-6 mb-8">
-          <div className="bg-black text-white p-1 rounded-sm w-8 h-8 flex items-center justify-center transform -rotate-45">
-            <Triangle className="fill-current w-4 h-4 transform rotate-45" />
+        <div className="flex items-center gap-2 px-8 mb-8 z-10 flex-shrink-0">
+          <div className="bg-black text-white p-1 rounded-sm w-10 h-10 flex items-center justify-center transform -rotate-45 shadow-xl">
+            <Triangle className="fill-current w-5 h-5 transform rotate-45" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tighter">SHARK<br/>TASK</h1>
+          <h1 className="text-3xl font-black tracking-tighter uppercase ml-2 bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">SHARK<br />TASK</h1>
         </div>
 
-        {/* Studio Selector */}
-        <div className="px-4 mb-6">
-          <button className="w-full bg-[#cbd5e1] hover:bg-[#b0bdcc] text-gray-800 font-semibold py-2 px-4 rounded-md flex items-center justify-between transition-colors">
-            Forum Studio
-            <ChevronDown className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Main Navigation */}
-        <nav className="flex-1 px-2 space-y-1">
-          {['Home', 'My Task', 'Inbox', 'Message', 'Analytics'].map((item, i) => (
-            <Link 
-              key={item} 
-              href={item === 'Home' ? '/dashboard' : item === 'My Task' ? '/dashboard/tasks' : '#'}
-              className={`block px-4 py-2 text-sm font-medium rounded-md ${
-                i === 0 ? 'bg-white shadow-sm text-black' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {item}
-            </Link>
-          ))}
-          
-          <div className="mt-8 mb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Project
+        {/* Current User Badge */}
+        {currentUser && (
+          <div className="mx-4 mb-6 bg-gradient-to-r from-[#3B82F6]/10 to-[#A855F7]/10 rounded-[20px] p-4 flex items-center gap-3 flex-shrink-0">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black flex-shrink-0 ${
+              currentUser.role === 'Admin' ? 'bg-red-500' : currentUser.role === 'Requester' ? 'bg-[#3B82F6]' : 'bg-[#A855F7]'
+            }`}>
+              {currentUser.username.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-black text-gray-900 text-sm truncate">{currentUser.username}</p>
+              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                currentUser.role === 'Admin' ? 'bg-red-100 text-red-600' :
+                currentUser.role === 'Requester' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'
+              }`}>{currentUser.role}</span>
+            </div>
           </div>
-          
-          {['Project1', 'Project2', 'Project3', 'Project4', 'Project5'].map((project) => (
-            <Link 
-              key={project} 
-              href="#"
-              className="block px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md"
-            >
-              {project}
+        )}
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 space-y-1 z-10 overflow-y-auto w-full custom-scrollbar">
+          {navItems.map(({ label, path }) => {
+            const isActive = pathname === path;
+            return (
+              <Link key={label} href={path}
+                className={`block px-5 py-3.5 text-[15px] font-bold rounded-[20px] transition-all duration-200 ${
+                  isActive ? 'bg-black text-[#5EE1CD] shadow-lg shadow-black/20' : 'text-gray-500 hover:bg-gray-100 hover:text-black'
+                }`}>
+                {label}
+              </Link>
+            );
+          })}
+
+          {/* Projects Section */}
+          <div className="mt-8 mb-3 px-5 text-xs font-black text-gray-300 uppercase tracking-widest">Projects</div>
+
+          {projects.map(project => (
+            <Link key={project.project_id} href={`/projects/${project.project_id}`}
+              className={`block px-5 py-3 text-[13px] font-bold rounded-[20px] transition-all truncate ${
+                pathname.startsWith(`/projects/${project.project_id}`) ? 'bg-[#3B82F6]/10 text-[#3B82F6]' : 'text-gray-400 hover:bg-[#3B82F6]/5 hover:text-[#3B82F6]'
+              }`}>
+              # {project.title}
             </Link>
           ))}
         </nav>
+
+        {/* Bottom Actions */}
+        <div className="px-4 pt-4 border-t border-gray-100 flex-shrink-0 space-y-1">
+          <Link href="/profile"
+            className={`flex items-center gap-3 px-5 py-3 rounded-[20px] font-bold text-sm transition-all ${
+              pathname === '/profile' ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-black'
+            }`}>
+            <Settings className="w-4 h-4" /> Profile Settings
+          </Link>
+
+          {currentUser?.role === 'Admin' && (
+            <Link href="/admin"
+              className={`flex items-center gap-3 px-5 py-3 rounded-[20px] font-bold text-sm transition-all ${
+                pathname === '/admin' ? 'bg-red-500 text-white' : 'text-red-500 hover:bg-red-50'
+              }`}>
+              <Shield className="w-4 h-4" /> Admin Panel
+            </Link>
+          )}
+
+          <button onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-5 py-3 rounded-[20px] font-bold text-sm text-gray-400 hover:bg-gray-100 hover:text-black transition-all">
+            <LogOut className="w-4 h-4" /> Log Out
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-white">
-        <div className="flex-1 overflow-auto p-8">
-          {children}
-        </div>
+      <main className="flex-1 h-full overflow-y-auto bg-white/95 backdrop-blur-3xl border-4 border-[#A855F7]/30 rounded-[40px] shadow-2xl relative custom-scrollbar">
+        {children}
       </main>
-
     </div>
   );
 }
