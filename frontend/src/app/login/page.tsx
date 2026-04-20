@@ -9,7 +9,7 @@ import api from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     try {
       const response = await api.post('/auth/login', {
-        username,
+        email,
         password,
       });
 
@@ -44,7 +44,7 @@ export default function LoginPage() {
 
   return (
     <div 
-      className="min-h-screen w-full flex items-center justify-end p-4 md:p-12"
+      className="min-h-screen w-full flex items-center justify-end p-4 md:p-12 bg-black/0"
       style={{
         backgroundImage: 'url("/shark_bg.png")',
         backgroundSize: 'cover',
@@ -72,10 +72,10 @@ export default function LoginPage() {
 
           <div>
             <input 
-              type="text" 
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email" 
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full border border-gray-300 rounded-full px-6 py-4 outline-none focus:border-[#5EE1CD] transition-colors"
             />

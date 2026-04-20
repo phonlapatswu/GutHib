@@ -26,6 +26,7 @@ Track the development progress of the Shark Task Platform.
 - **Due Date Reminders / Overdue Badge**: แสดงเตือนเมื่องานใกล้ครบกำหนดหรือเลย deadline
 - **Project Archive/Delete**: Owner/Admin/Manager สามารถปิดหรือลบโปรเจกต์ได้
 - **Dashboard Stats Enhancement**: แสดง % completion ต่อโปรเจกต์บนหน้าหลัก
+- **Enhanced Project Creation & Privacy**: Add members/end-date during creation + strict filtering (Owner/Member only).
 
 ## 🟡 In Progress
 *(No tasks currently in progress)*

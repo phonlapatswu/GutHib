@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { Loader2, User, Lock, CheckCircle, TrendingUp } from 'lucide-react';
 import api from '@/lib/api';
+import Image from 'next/image';
 import Cookies from 'js-cookie';
 
 interface ProfileData {
-  user_id: number; username: string; email: string; role: string; created_at: string;
+  user_id: number; username: string; email: string; role: string; avatar_url: string | null; created_at: string;
   taskStats: Array<{ status: string; _count: number }>;
 }
 
@@ -18,6 +19,9 @@ export default function ProfilePage() {
   const [profileMsg, setProfileMsg] = useState('');
   const [pwMsg, setPwMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
     const init = async () => {
@@ -56,6 +60,27 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+      const res = await api.post('/users/me/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setProfile(prev => prev ? { ...prev, avatar_url: res.data.avatar_url } : null);
+      setProfileMsg('✅ Avatar updated!');
+    } catch (err: any) {
+      setProfileMsg(`❌ ${err.response?.data?.error || 'Upload failed'}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   if (isLoading) return <div className="flex justify-center items-center h-full"><Loader2 className="w-12 h-12 animate-spin text-[#5EE1CD]" /></div>;
   if (!profile) return <div className="flex justify-center items-center h-full"><p className="text-gray-400 font-bold">Could not load profile.</p></div>;
 
@@ -72,11 +97,29 @@ export default function ProfilePage() {
 
       {/* User Card */}
       <div className="bg-white rounded-[40px] p-8 shadow-2xl border-4 border-[#5EE1CD]/20 flex items-center gap-6">
-        <div className="w-24 h-24 bg-gradient-to-tr from-[#3B82F6] to-[#A855F7] rounded-full flex items-center justify-center text-4xl font-black text-white flex-shrink-0 shadow-xl">
-          {profile.username.charAt(0).toUpperCase()}
-        </div>
+        <label className="relative group cursor-pointer flex-shrink-0">
+          <div className="w-24 h-24 bg-gradient-to-tr from-[#3B82F6] to-[#A855F7] rounded-full flex items-center justify-center text-4xl font-black text-white shadow-xl overflow-hidden relative">
+            {profile.avatar_url ? (
+               <Image src={`${API_BASE}${profile.avatar_url}`} alt="Avatar" fill className="object-cover" />
+            ) : (
+               profile.username.charAt(0).toUpperCase()
+            )}
+          </div>
+          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <TrendingUp className="text-white w-6 h-6 rotate-90" /> {/* Just an icon for "upload" since I don't have Upload specific icon imported besides Loader */}
+          </div>
+          <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} disabled={isUploading} />
+          {isUploading && (
+            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-white" />
+            </div>
+          )}
+        </label>
         <div>
-          <h3 className="text-3xl font-black text-gray-900">{profile.username}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-3xl font-black text-gray-900">{profile.username}</h3>
+            {isUploading && <Loader2 className="w-4 h-4 animate-spin text-[#5EE1CD]" />}
+          </div>
           <p className="text-gray-500 font-bold">{profile.email}</p>
           <span className="text-xs font-black uppercase bg-black text-[#5EE1CD] px-4 py-1.5 rounded-full mt-2 inline-block">{profile.role}</span>
         </div>

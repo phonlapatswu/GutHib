@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import taskRoutes from './routes/tasks';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
@@ -10,6 +11,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Main Routes
 app.use('/api/auth', authRoutes);

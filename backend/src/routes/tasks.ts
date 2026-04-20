@@ -51,7 +51,7 @@ router.get('/:id/tasks', async (req: Request, res: Response): Promise<void> => {
 
     const tasks = await prisma.task.findMany({
       where: { project_id: projectId },
-      include: { assignee: { select: { user_id: true, username: true } } },
+      include: { assignees: { include: { user: { select: { user_id: true, username: true } } } } },
       orderBy: { created_at: 'asc' },
     });
 

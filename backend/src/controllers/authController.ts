@@ -71,27 +71,27 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const schema = yup.object().shape({
-      username: yup.string().required(),
+      email: yup.string().email().required(),
       password: yup.string().required(),
     });
 
     await schema.validate(req.body);
 
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
     const user = await prisma.user.findUnique({
-      where: { username },
+      where: { email },
     });
 
     if (!user) {
-      res.status(401).json({ error: 'Invalid username or password' });
+      res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
-      res.status(401).json({ error: 'Invalid username or password' });
+      res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
 
@@ -131,6 +131,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
         username: true,
         email: true,
         role: true,
+        avatar_url: true,
         created_at: true,
       },
     });

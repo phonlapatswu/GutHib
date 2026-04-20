@@ -1,11 +1,12 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 import bcrypt from 'bcrypt';
+import { getIO } from '../socket';
 
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const users = await prisma.user.findMany({
-      select: { user_id: true, username: true, email: true, role: true, created_at: true },
+      select: { user_id: true, username: true, email: true, role: true, avatar_url: true, created_at: true },
       orderBy: { created_at: 'asc' },
     });
     res.json(users);
@@ -19,10 +20,10 @@ export const getMyTasks = async (req: Request, res: Response): Promise<void> => 
   try {
     const userId = (req as any).user.user_id;
     const tasks = await prisma.task.findMany({
-      where: { assignee_id: userId },
+      where: { assignees: { some: { user_id: userId } } },
       include: {
         project: { select: { title: true } },
-        assignee: { select: { username: true } },
+        assignees: { include: { user: { select: { username: true } } } },
       },
       orderBy: { created_at: 'desc' },
     });
@@ -38,7 +39,7 @@ export const getInboxLogs = async (req: Request, res: Response): Promise<void> =
     const userId = (req as any).user.user_id;
     const logs = await prisma.commitLog.findMany({
       where: {
-        OR: [{ user_id: userId }, { task: { assignee_id: userId } }],
+        OR: [{ user_id: userId }, { task: { assignees: { some: { user_id: userId } } } }],
       },
       include: {
         user: { select: { username: true } },
@@ -64,7 +65,7 @@ export const getInboxCount = async (req: Request, res: Response): Promise<void> 
         timestamp: { gte: since },
         user_id: { not: userId }, // not self-actions
         OR: [
-          { task: { assignee_id: userId } }, // actions on my tasks
+          { task: { assignees: { some: { user_id: userId } } } }, // actions on my tasks
         ],
       },
     });
@@ -80,13 +81,13 @@ export const getMyProfile = async (req: Request, res: Response): Promise<void> =
     const userId = (req as any).user.user_id;
     const user = await prisma.user.findUnique({
       where: { user_id: userId },
-      select: { user_id: true, username: true, email: true, role: true, created_at: true },
+      select: { user_id: true, username: true, email: true, role: true, avatar_url: true, created_at: true },
     });
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
 
     const taskStats = await prisma.task.groupBy({
       by: ['status'],
-      where: { assignee_id: userId },
+      where: { assignees: { some: { user_id: userId } } },
       _count: true,
     });
 
@@ -109,8 +110,11 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     const user = await prisma.user.update({
       where: { user_id: userId },
       data: updateData,
-      select: { user_id: true, username: true, email: true, role: true },
+      select: { user_id: true, username: true, email: true, role: true, avatar_url: true },
     });
+
+    getIO().to(`user_${userId}`).emit('user_updated', user);
+
     res.json(user);
   } catch (error: any) {
     if (error?.code === 'P2002') {
@@ -160,7 +164,7 @@ export const adminGetUsers = async (req: Request, res: Response): Promise<void> 
       return;
     }
     const users = await prisma.user.findMany({
-      select: { user_id: true, username: true, email: true, role: true, created_at: true },
+      select: { user_id: true, username: true, email: true, role: true, avatar_url: true, created_at: true },
       orderBy: { created_at: 'asc' },
     });
     res.json(users);
@@ -186,7 +190,7 @@ export const adminUpdateRole = async (req: Request, res: Response): Promise<void
     const user = await prisma.user.update({
       where: { user_id: targetId },
       data: { role },
-      select: { user_id: true, username: true, role: true },
+      select: { user_id: true, username: true, role: true, avatar_url: true },
     });
     res.json(user);
   } catch (error) {
@@ -212,6 +216,30 @@ export const adminDeleteUser = async (req: Request, res: Response): Promise<void
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const updateAvatar = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.user_id;
+    if (!req.file) {
+      res.status(400).json({ error: 'No image file provided' });
+      return;
+    }
+
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    const user = await prisma.user.update({
+      where: { user_id: userId },
+      data: { avatar_url: avatarUrl },
+      select: { user_id: true, username: true, avatar_url: true }
+    });
+
+    getIO().to(`user_${userId}`).emit('user_updated', user);
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating avatar:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

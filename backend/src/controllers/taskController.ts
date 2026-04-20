@@ -18,12 +18,34 @@ export const updateTaskStatus = async (req: Request, res: Response): Promise<voi
       return;
     }
 
+    const userId = (req as any).user.user_id;
+    const userRole = (req as any).user.role;
+
     const existingTask = await prisma.task.findFirst({
       where: { task_id: taskId, project_id: projectId },
+      include: { 
+        project: { select: { owner_id: true } },
+        assignees: { select: { user_id: true } }
+      }
     });
 
     if (!existingTask) {
       res.status(404).json({ error: 'Task not found in this project' });
+      return;
+    }
+
+    const isOwner = existingTask.project.owner_id === userId;
+    const isManager = userRole === 'Admin' || userRole === 'Manager';
+    const isAssignee = existingTask.assignees.some(a => a.user_id === userId);
+
+    if (!isOwner && !isManager && !isAssignee) {
+      res.status(403).json({ error: 'You do not have permission to update this task status' });
+      return;
+    }
+
+    // Restrict "Closed" to Managers/Owners only (Assignees cannot close tasks themselves)
+    if (status === task_status.Closed && !isOwner && !isManager) {
+      res.status(403).json({ error: 'Only Managers or the Project Owner can close tasks' });
       return;
     }
 
@@ -49,7 +71,7 @@ export const updateTaskStatus = async (req: Request, res: Response): Promise<voi
 export const createTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.projectId as string, 10);
-    const { title, description, assignee_id, due_date, priority } = req.body;
+    const { title, description, assignee_ids, due_date, planned_start_date, priority } = req.body;
     const requesterRole = (req as any).user?.role;
 
     if (isNaN(projectId) || !title) {
@@ -59,7 +81,9 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
 
     // Only Manager and Admin can assign tasks to others
     const canAssign = requesterRole === 'Manager' || requesterRole === 'Admin';
-    const resolvedAssigneeId = canAssign && assignee_id ? parseInt(assignee_id, 10) : null;
+    const resolvedAssigneeIds = canAssign && Array.isArray(assignee_ids) 
+      ? assignee_ids.map((id: any) => parseInt(id, 10)) 
+      : [];
 
     const task = await prisma.task.create({
       data: {
@@ -67,23 +91,26 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
         title,
         description,
         priority: priority as task_priority || task_priority.Medium,
-        assignee_id: resolvedAssigneeId,
         due_date: due_date ? new Date(due_date) : null,
+        planned_start_date: planned_start_date ? new Date(planned_start_date) : null,
+        assignees: {
+          create: resolvedAssigneeIds.map(userId => ({ user_id: userId }))
+        }
       },
       include: {
-        assignee: { select: { user_id: true, username: true } },
+        assignees: { include: { user: { select: { user_id: true, username: true } } } },
         project: { select: { title: true } },
       }
     });
 
-    // Log the assignment as a Claim action
-    if (task.assignee_id) {
+    // Log the assignment
+    if (resolvedAssigneeIds.length > 0) {
       await prisma.commitLog.create({
         data: {
           task_id: task.task_id,
           user_id: (req as any).user.user_id,
           action: 'Claim',
-          message: `Task assigned to ${task.assignee?.username}`,
+          message: `Task assigned to: ${task.assignees.map(a => a.user.username).join(', ')}`,
         }
       });
     }
@@ -106,7 +133,7 @@ export const getTask = async (req: Request, res: Response): Promise<void> => {
     const task = await prisma.task.findUnique({
       where: { task_id: taskId },
       include: {
-        assignee: { select: { user_id: true, username: true, email: true } },
+        assignees: { include: { user: { select: { user_id: true, username: true, email: true } } } },
         project: { select: { project_id: true, title: true, owner_id: true } },
         commits: {
           include: { user: { select: { username: true } } },
@@ -118,7 +145,7 @@ export const getTask = async (req: Request, res: Response): Promise<void> => {
           orderBy: { submitted_at: 'desc' },
         },
         sub_tasks: {
-          include: { assignee: { select: { username: true } } },
+          include: { assignees: { include: { user: { select: { username: true } } } } },
         },
       },
     });
@@ -143,18 +170,27 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const { title, description, assignee_id, due_date, priority, status } = req.body;
+    const { title, description, assignee_ids, due_date, planned_start_date, priority, status } = req.body;
     const requesterRole = (req as any).user?.role;
     const canAssign = requesterRole === 'Manager' || requesterRole === 'Admin';
 
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    // Only Manager/Admin may change the assignee
-    if (assignee_id !== undefined && canAssign) {
-      updateData.assignee_id = assignee_id ? parseInt(assignee_id, 10) : null;
+
+    // Handle multiple assignees
+    if (assignee_ids !== undefined && canAssign) {
+      const ids = Array.isArray(assignee_ids) ? assignee_ids.map(id => parseInt(id, 10)) : [];
+      
+      // Update by deleting all existing assignments and creating new ones
+      await prisma.taskAssignee.deleteMany({ where: { task_id: taskId } });
+      updateData.assignees = {
+        create: ids.map(userId => ({ user_id: userId }))
+      };
     }
+
     if (due_date !== undefined) updateData.due_date = due_date ? new Date(due_date) : null;
+    if (planned_start_date !== undefined) updateData.planned_start_date = planned_start_date ? new Date(planned_start_date) : null;
     if (priority !== undefined) updateData.priority = priority as task_priority;
     if (status !== undefined && Object.values(task_status).includes(status)) {
       updateData.status = status as task_status;
@@ -166,7 +202,7 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
       where: { task_id: taskId },
       data: updateData,
       include: {
-        assignee: { select: { user_id: true, username: true } },
+        assignees: { include: { user: { select: { user_id: true, username: true } } } },
         project: { select: { title: true } },
       },
     });

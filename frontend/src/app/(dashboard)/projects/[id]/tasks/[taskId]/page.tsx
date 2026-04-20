@@ -4,15 +4,15 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Loader2, ChevronLeft, CheckCircle2, Clock, AlertTriangle, Send,
-  GitMerge, XCircle, Edit2, Trash2, Save, X, Plus, MessageSquare, Paperclip
+  GitMerge, XCircle, Edit2, Trash2, Save, X, Plus, MessageSquare, Paperclip, Calendar
 } from 'lucide-react';
 import api from '@/lib/api';
 
 interface TaskDetail {
   task_id: number; project_id: number; title: string; description: string | null;
-  status: string; priority: string; due_date: string | null; created_at: string;
-  started_at: string | null; completed_at: string | null;
-  assignee: { user_id: number; username: string; email: string } | null;
+  status: string; priority: string; due_date: string | null; planned_start_date: string | null; 
+  created_at: string; started_at: string | null; completed_at: string | null;
+  assignees: Array<{ user: { user_id: number; username: string; email: string } }>;
   project: { project_id: number; title: string; owner_id: number };
   commits: Array<{ log_id: number; action: string; message: string | null; timestamp: string; user: { username: string } }>;
   submissions: Array<{ submission_id: number; content: string | null; file_url: string | null; submitted_at: string; worker: { username: string } }>;
@@ -37,9 +37,17 @@ export default function TaskDetailPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [allUsers, setAllUsers] = useState<Array<{ user_id: number; username: string; role: string }>>([]);
+  const [projectMembers, setProjectMembers] = useState<Array<{ user_id: number; username: string; role: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ title: '', description: '', priority: '', assignee_id: '', due_date: '' });
+  const [editForm, setEditForm] = useState({ 
+    title: '', 
+    description: '', 
+    priority: '', 
+    assignee_ids: [] as number[], 
+    due_date: '',
+    planned_start_date: ''
+  });
   const [submitContent, setSubmitContent] = useState('');
   const [submitFileUrl, setSubmitFileUrl] = useState('');
   const [reviewMessage, setReviewMessage] = useState('');
@@ -58,8 +66,9 @@ export default function TaskDetailPage() {
       title: res.data.title,
       description: res.data.description || '',
       priority: res.data.priority,
-      assignee_id: res.data.assignee?.user_id?.toString() || '',
+      assignee_ids: res.data.assignees?.map((a: any) => a.user.user_id) || [],
       due_date: res.data.due_date ? res.data.due_date.split('T')[0] : '',
+      planned_start_date: res.data.planned_start_date ? res.data.planned_start_date.split('T')[0] : '',
     });
   }, [projectId, taskId]);
 
@@ -71,9 +80,14 @@ export default function TaskDetailPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const [userRes, usersRes] = await Promise.all([api.get('/auth/me'), api.get('/users')]);
+        const [userRes, usersRes, membersRes] = await Promise.all([
+          api.get('/auth/me'), 
+          api.get('/users'),
+          api.get(`/projects/${projectId}/members`)
+        ]);
         setCurrentUser(userRes.data);
         setAllUsers(usersRes.data);
+        setProjectMembers(membersRes.data);
         await Promise.all([fetchTask(), fetchComments()]);
       } catch (e) { console.error(e); }
       finally { setIsLoading(false); }
@@ -90,8 +104,9 @@ export default function TaskDetailPage() {
     try {
       await api.put(`/projects/${projectId}/tasks/${taskId}`, {
         title: editForm.title, description: editForm.description || undefined,
-        priority: editForm.priority, assignee_id: editForm.assignee_id || undefined,
+        priority: editForm.priority, assignee_ids: editForm.assignee_ids,
         due_date: editForm.due_date || undefined,
+        planned_start_date: editForm.planned_start_date || undefined,
       });
       await fetchTask(); setIsEditing(false);
     } catch (err: any) { alert(err.response?.data?.error || 'Failed to save'); }
@@ -156,11 +171,19 @@ export default function TaskDetailPage() {
     } catch (err: any) { alert(err.response?.data?.error || 'Failed to create subtask'); }
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      await api.patch(`/projects/${projectId}/tasks/${taskId}/status`, { status: newStatus });
+      await fetchTask();
+    } catch (err: any) { alert(err.response?.data?.error || 'Failed to update status'); }
+  };
+
   if (isLoading) return <div className="flex justify-center items-center h-full"><Loader2 className="w-12 h-12 animate-spin text-[#A855F7]" /></div>;
   if (!task) return <div className="flex justify-center items-center h-full"><p className="text-gray-400 font-bold">Task not found.</p></div>;
 
   const isOwnerOrRequester = currentUser?.role === 'Requester' || currentUser?.role === 'Admin' || task.project.owner_id === currentUser?.user_id;
-  const isAssignee = task.assignee?.user_id === currentUser?.user_id;
+  const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'Admin';
+  const isAssignee = task.assignees.some(a => a.user.user_id === currentUser?.user_id);
   const canSubmit = isAssignee && task.status === 'In_Progress';
   const canReview = isOwnerOrRequester && task.status === 'Review';
   const overdue = isOverdue(task.due_date, task.status);
@@ -200,17 +223,41 @@ export default function TaskDetailPage() {
                 </select>
               </div>
               <div>
+                <label className="text-xs font-black text-gray-400 uppercase block mb-1">Start Date</label>
+                <input type="date" value={editForm.planned_start_date} onChange={e => setEditForm(p => ({ ...p, planned_start_date: e.target.value }))}
+                  className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-3 py-2 font-bold outline-none" />
+              </div>
+              <div>
                 <label className="text-xs font-black text-gray-400 uppercase block mb-1">Due Date</label>
                 <input type="date" value={editForm.due_date} onChange={e => setEditForm(p => ({ ...p, due_date: e.target.value }))}
                   className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-3 py-2 font-bold outline-none" />
               </div>
               <div className="col-span-2">
-                <label className="text-xs font-black text-gray-400 uppercase block mb-1">Assignee</label>
-                <select value={editForm.assignee_id} onChange={e => setEditForm(p => ({ ...p, assignee_id: e.target.value }))}
-                  className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-3 py-2 font-bold outline-none">
-                  <option value="">— Unassigned —</option>
-                  {allUsers.map(u => <option key={u.user_id} value={u.user_id}>{u.username} ({u.role})</option>)}
-                </select>
+                <label className="text-xs font-black text-gray-400 uppercase block mb-2">Assignees</label>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-4 bg-gray-50 rounded-2xl border-2 border-gray-100 custom-scrollbar">
+                  {projectMembers.map(u => (
+                    <button
+                      key={u.user_id}
+                      type="button"
+                      onClick={() => {
+                        const isSelected = editForm.assignee_ids.includes(u.user_id);
+                        setEditForm(p => ({
+                          ...p,
+                          assignee_ids: isSelected 
+                            ? p.assignee_ids.filter(id => id !== u.user_id)
+                            : [...p.assignee_ids, u.user_id]
+                        }));
+                      }}
+                      className={`px-4 py-2 rounded-full text-[10px] font-black transition-all ${
+                        editForm.assignee_ids.includes(u.user_id)
+                          ? 'bg-[#A855F7] text-white shadow-md'
+                          : 'bg-white text-gray-400 border border-gray-100'
+                      }`}
+                    >
+                      {u.username}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
@@ -237,27 +284,57 @@ export default function TaskDetailPage() {
                     </button>
                   </>
                 )}
-                <button onClick={() => setShowSubtaskModal(true)} className="p-3 bg-gray-100 hover:bg-blue-50 rounded-2xl text-gray-500 hover:text-blue-500 transition-colors" title="Add Sub-task">
-                  <Plus className="w-5 h-5" />
-                </button>
+                {isManager && (
+                  <button onClick={() => setShowSubtaskModal(true)} className="p-3 bg-gray-100 hover:bg-blue-50 rounded-2xl text-gray-500 hover:text-blue-500 transition-colors" title="Add Sub-task">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                )}
               </div>
             </div>
 
             {task.description && <p className="text-gray-600 font-medium mb-5 leading-relaxed">{task.description}</p>}
 
             <div className="flex flex-wrap gap-2">
-              <span className={`text-xs font-black uppercase px-4 py-2 rounded-full ${statusColors[task.status] || 'bg-gray-100 text-gray-500'}`}>
-                {task.status.replace('_', ' ')}
-              </span>
+              {isManager || isAssignee ? (
+                <div className="relative group/status">
+                  <select 
+                    value={task.status} 
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className={`text-xs font-black uppercase px-4 py-2 rounded-full cursor-pointer outline-none border-none appearance-none transition-all hover:ring-4 hover:ring-opacity-30 ${statusColors[task.status]} ${
+                      task.status === 'Open' ? 'hover:ring-gray-300' : task.status === 'In_Progress' ? 'hover:ring-blue-300' : 
+                      task.status === 'Review' ? 'hover:ring-purple-300' : 'hover:ring-green-300'
+                    }`}
+                  >
+                    <option value="Open">Open</option>
+                    <option value="In_Progress">In Progress</option>
+                    <option value="Review">Review</option>
+                    {(isManager || task.project.owner_id === currentUser?.user_id) && <option value="Closed">Closed</option>}
+                  </select>
+                </div>
+              ) : (
+                <span className={`text-xs font-black uppercase px-4 py-2 rounded-full ${statusColors[task.status] || 'bg-gray-100 text-gray-500'}`}>
+                  {task.status.replace('_', ' ')}
+                </span>
+              )}
               <span className={`text-xs font-black uppercase px-4 py-2 rounded-full ${
                 task.priority === 'High' ? 'bg-red-100 text-red-600' :
                 task.priority === 'Low' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-700'
               }`}>{task.priority}</span>
-              {task.assignee ? (
-                <span className="text-xs font-black px-4 py-2 rounded-full bg-[#A855F7]/10 text-[#A855F7]">
-                  👤 {task.assignee.username}
-                </span>
+              {task.assignees.length > 0 ? (
+                <div className="flex -space-x-3">
+                  {task.assignees.map(a => (
+                    <div key={a.user.user_id} className="w-10 h-10 bg-[#A855F7] border-4 border-white rounded-full flex items-center justify-center text-white text-xs font-black shadow-lg" title={a.user.username}>
+                      {a.user.username.charAt(0).toUpperCase()}
+                    </div>
+                  ))}
+                </div>
               ) : <span className="text-xs font-black px-4 py-2 rounded-full bg-gray-100 text-gray-400">Unassigned</span>}
+              {task.planned_start_date && (
+                <span className="text-xs font-black px-4 py-2 rounded-full flex items-center gap-1 bg-gray-100 text-gray-600">
+                  <Calendar className="w-3 h-3" />
+                  Start — {new Date(task.planned_start_date).toLocaleDateString()}
+                </span>
+              )}
               {task.due_date && (
                 <span className={`text-xs font-black px-4 py-2 rounded-full flex items-center gap-1 ${
                   overdue ? 'bg-red-100 text-red-600 animate-pulse' : dueSoon ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-600'

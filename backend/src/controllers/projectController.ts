@@ -4,16 +4,30 @@ import * as yup from 'yup';
 
 export const getProjects = async (req: Request, res: Response): Promise<void> => {
   try {
+    const userId = (req as any).user.user_id;
+    const userRole = (req as any).user.role;
+
+    const whereClause: any = { status: 'Active' };
+
+    // Standard Privacy Filter: Only Owner, Members, or Admins can see.
+    if (userRole !== 'Admin') {
+      whereClause.OR = [
+        { owner_id: userId },
+        { members: { some: { user_id: userId } } }
+      ];
+    }
+
     const projects = await prisma.project.findMany({
-      where: { status: 'Active' },
+      where: whereClause,
       include: {
-        owner: { select: { username: true } },
+        owner: { select: { username: true, avatar_url: true } },
+        members: { include: { user: { select: { user_id: true, username: true, email: true, role: true, avatar_url: true } } } },
         _count: { select: { tasks: true, members: true } },
       },
       orderBy: { created_at: 'desc' },
     });
 
-    // Enrich with completion stats
+    // Enrich with completion stats and unread counts
     const enriched = await Promise.all(projects.map(async (p) => {
       const taskStats = await prisma.task.groupBy({
         by: ['status'],
@@ -23,7 +37,17 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
       const total = taskStats.reduce((s, t) => s + t._count, 0);
       const closed = taskStats.find(t => t.status === 'Closed')?._count || 0;
       const completionRate = total === 0 ? 0 : Math.round((closed / total) * 100);
-      return { ...p, taskStats, completionRate };
+
+      // Unread messages logic
+      const receipt = await prisma.projectReadReceipt.findUnique({
+        where: { project_id_user_id: { project_id: p.project_id, user_id: userId } }
+      });
+      const lastRead = receipt ? receipt.last_read_at : new Date(0);
+      const unreadCount = await prisma.message.count({
+        where: { project_id: p.project_id, sender_id: { not: userId }, created_at: { gt: lastRead } }
+      });
+
+      return { ...p, taskStats, completionRate, unreadCount };
     }));
 
     res.json(enriched);
@@ -38,18 +62,33 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     const schema = yup.object().shape({
       title: yup.string().required().max(255),
       description: yup.string().optional(),
+      end_date: yup.date().nullable().optional(),
+      members: yup.array().of(yup.number()).optional(),
     });
     await schema.validate(req.body);
 
-    const { title, description } = req.body;
+    const { title, description, end_date, members } = req.body;
     const userId = (req as any).user.user_id;
+
+    // Prepare member list: owner + selected members (deduplicated)
+    const memberIds = Array.from(new Set([userId, ...(members || [])]));
 
     const project = await prisma.project.create({
       data: {
-        title, description, owner_id: userId,
-        members: { create: { user_id: userId } },
+        title,
+        description,
+        owner_id: userId,
+        end_date: end_date ? new Date(end_date) : null,
+        members: {
+          create: memberIds.map((id: number) => ({
+            user_id: id
+          }))
+        }
       },
-      include: { owner: { select: { username: true } } },
+      include: { 
+        owner: { select: { username: true } },
+        members: { include: { user: { select: { username: true } } } }
+      },
     });
 
     res.status(201).json(project);
@@ -110,7 +149,7 @@ export const getProjectMembers = async (req: Request, res: Response): Promise<vo
 
     const members = await prisma.projectMember.findMany({
       where: { project_id: projectId },
-      include: { user: { select: { user_id: true, username: true, email: true, role: true } } },
+      include: { user: { select: { user_id: true, username: true, email: true, role: true, avatar_url: true } } },
       orderBy: { joined_at: 'asc' },
     });
     res.json(members.map(m => ({ ...m.user, joined_at: m.joined_at })));

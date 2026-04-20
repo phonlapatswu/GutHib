@@ -54,7 +54,7 @@ export default function RegisterPage() {
 
   return (
     <div 
-      className="min-h-screen w-full flex items-center justify-end p-4 md:p-12"
+      className="min-h-screen w-full flex items-center justify-end p-4 md:p-12 bg-black/0"
       style={{
         backgroundImage: 'url("/shark_bg.png")',
         backgroundSize: 'cover',

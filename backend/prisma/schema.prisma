@@ -12,14 +12,17 @@ model User {
   password_hash String
   email         String          @unique @db.VarChar(255)
   role          user_role       @default(Worker)
+  avatar_url    String?         @db.VarChar(500)
   created_at    DateTime        @default(now()) @db.Timestamptz(6)
   commits       CommitLog[]
   projects      Project[]
   submissions   Submission[]
-  tasks         Task[]
-  messages      Message[]
+  sent_messages     Message[]      @relation("SentMessages")
+  received_messages Message[]      @relation("ReceivedMessages")
   memberships   ProjectMember[]
   comments      TaskComment[]
+  task_assignments TaskAssignee[]
+  project_read_receipts ProjectReadReceipt[]
 
   @@map("users")
 }
@@ -30,10 +33,13 @@ model Project {
   title       String          @db.VarChar(255)
   description String?
   status      project_status  @default(Active)
+  end_date    DateTime?       @db.Date
   created_at  DateTime        @default(now()) @db.Timestamptz(6)
   owner       User            @relation(fields: [owner_id], references: [user_id], onUpdate: NoAction)
   tasks       Task[]
   members     ProjectMember[]
+  messages    Message[]
+  read_receipts ProjectReadReceipt[]
 
   @@index([owner_id], map: "idx_projects_owner")
   @@index([status], map: "idx_projects_status")
@@ -48,26 +54,38 @@ model Task {
   description    String?
   priority       task_priority @default(Medium)
   status         task_status   @default(Open)
-  assignee_id    Int?
-  due_date       DateTime?     @db.Date
-  created_at     DateTime      @default(now()) @db.Timestamptz(6)
-  started_at     DateTime?     @db.Timestamptz(6)
-  completed_at   DateTime?     @db.Timestamptz(6)
-  merged_at      DateTime?     @db.Timestamptz(6)
+  due_date       DateTime?       @db.Date
+  planned_start_date DateTime?     @db.Date
+  created_at     DateTime        @default(now()) @db.Timestamptz(6)
+  started_at     DateTime?       @db.Timestamptz(6)
+  completed_at   DateTime?       @db.Timestamptz(6)
+  merged_at      DateTime?       @db.Timestamptz(6)
   commits        CommitLog[]
   submissions    Submission[]
   comments       TaskComment[]
-  assignee       User?         @relation(fields: [assignee_id], references: [user_id], onUpdate: NoAction)
-  parent_task    Task?         @relation("TaskToTask", fields: [parent_task_id], references: [task_id], onUpdate: NoAction)
-  sub_tasks      Task[]        @relation("TaskToTask")
-  project        Project       @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
+  parent_task    Task?           @relation("TaskToTask", fields: [parent_task_id], references: [task_id], onUpdate: NoAction)
+  sub_tasks      Task[]          @relation("TaskToTask")
+  project        Project         @relation(fields: [project_id], references: [project_id], onDelete: Cascade, onUpdate: NoAction)
+  assignees      TaskAssignee[]
 
-  @@index([assignee_id], map: "idx_tasks_assignee")
   @@index([parent_task_id], map: "idx_tasks_parent")
   @@index([priority], map: "idx_tasks_priority")
   @@index([project_id], map: "idx_tasks_project")
   @@index([status], map: "idx_tasks_status")
+  @@index([planned_start_date], map: "idx_tasks_start")
+  @@index([due_date], map: "idx_tasks_due")
   @@map("tasks")
+}
+
+model TaskAssignee {
+  id       Int  @id @default(autoincrement())
+  task_id  Int
+  user_id  Int
+  task     Task @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
+  user     User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([task_id, user_id])
+  @@map("task_assignees")
 }
 
 model CommitLog {
@@ -135,12 +153,20 @@ enum user_role {
 
 
 model Message {
-  message_id Int      @id @default(autoincrement())
-  sender_id  Int
-  text       String   @db.Text
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  sender     User     @relation(fields: [sender_id], references: [user_id], onDelete: Cascade)
+  message_id   Int      @id @default(autoincrement())
+  sender_id    Int
+  recipient_id Int?
+  project_id   Int?
+  text         String   @db.Text
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  read_at      DateTime? @db.Timestamptz(6)
+  sender       User     @relation("SentMessages", fields: [sender_id], references: [user_id], onDelete: Cascade)
+  recipient    User?    @relation("ReceivedMessages", fields: [recipient_id], references: [user_id], onDelete: SetNull)
+  project      Project? @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
 
+  @@index([sender_id])
+  @@index([recipient_id])
+  @@index([project_id])
   @@index([created_at(sort: Desc)])
   @@map("messages")
 }
@@ -170,4 +196,16 @@ model TaskComment {
   @@index([task_id])
   @@index([created_at(sort: Desc)])
   @@map("task_comments")
+}
+
+model ProjectReadReceipt {
+  id           Int      @id @default(autoincrement())
+  project_id   Int
+  user_id      Int
+  last_read_at DateTime @default(now()) @db.Timestamptz(6)
+  project      Project  @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
+  user         User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([project_id, user_id])
+  @@map("project_read_receipts")
 }

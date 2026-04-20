@@ -1,17 +1,26 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Loader2, FolderOpen, ChevronRight, CircleDashed, CheckCircle2,
-  Plus, Trash2, UserPlus, Search, Archive, XCircle
+  Plus, Trash2, UserPlus, Search, Archive, XCircle, Calendar
 } from 'lucide-react';
 import api from '@/lib/api';
 
+const GanttTimeline = dynamic(() => import('@/components/GanttTimeline'), { 
+  ssr: false,
+  loading: () => <div className="flex justify-center p-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+});
+
 interface Member { user_id: number; username: string; email: string; role: string; }
 interface TaskNode {
-  task_id: number; title: string; status: string; priority: string; due_date: string | null;
-  sub_tasks: TaskNode[]; assignee: { user_id: number; username: string } | null;
+  task_id: number; title: string; status: string; priority: string; 
+  due_date: string | null; planned_start_date: string | null;
+  sub_tasks: TaskNode[]; 
+  assignees: Array<{ user: { user_id: number; username: string } }>;
 }
 interface ProjectInfo { project_id: number; title: string; status: string; owner_id: number; }
 
@@ -27,7 +36,7 @@ export default function ProjectDetailsPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'tasks' | 'members'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'timeline'>('tasks');
   const [tasksTree, setTasksTree] = useState<TaskNode[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [allUsers, setAllUsers] = useState<Member[]>([]);
@@ -42,7 +51,14 @@ export default function ProjectDetailsPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterAssignee, setFilterAssignee] = useState('all');
-  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Medium', assignee_id: '', due_date: '' });
+  const [newTask, setNewTask] = useState({ 
+    title: '', 
+    description: '', 
+    priority: 'Medium', 
+    assignee_ids: [] as number[], 
+    due_date: '',
+    planned_start_date: ''
+  });
 
   const fetchTasks = useCallback(async () => {
     const res = await api.get(`/projects/${projectId}/tasks`);
@@ -84,7 +100,7 @@ export default function ProjectDetailsPage() {
       const matchStatus = filterStatus === 'all' || t.status === filterStatus;
       const matchPriority = filterPriority === 'all' || t.priority === filterPriority;
       const matchAssignee = filterAssignee === 'all' ||
-        (filterAssignee === 'unassigned' ? !t.assignee : t.assignee?.user_id === Number(filterAssignee));
+        (filterAssignee === 'unassigned' ? t.assignees.length === 0 : t.assignees.some(a => a.user.user_id === Number(filterAssignee)));
       return matchSearch && matchStatus && matchPriority && matchAssignee;
     });
   }, [tasksTree, searchQuery, filterStatus, filterPriority, filterAssignee, isFiltering]);
@@ -95,11 +111,12 @@ export default function ProjectDetailsPage() {
     try {
       await api.post(`/projects/${projectId}/tasks`, {
         title: newTask.title, description: newTask.description || undefined,
-        priority: newTask.priority, assignee_id: newTask.assignee_id || undefined,
+        priority: newTask.priority, assignee_ids: newTask.assignee_ids,
         due_date: newTask.due_date || undefined,
+        planned_start_date: newTask.planned_start_date || undefined,
       });
       await fetchTasks(); setShowCreateModal(false);
-      setNewTask({ title: '', description: '', priority: 'Medium', assignee_id: '', due_date: '' });
+      setNewTask({ title: '', description: '', priority: 'Medium', assignee_ids: [], due_date: '', planned_start_date: '' });
     } catch (err: any) { alert(err.response?.data?.error || 'Failed to create task'); }
   };
 
@@ -150,10 +167,18 @@ export default function ProjectDetailsPage() {
             {dueSoon && !overdue && <span className="text-[9px] font-black bg-yellow-400 text-white px-2 py-0.5 rounded-full flex-shrink-0">DUE SOON</span>}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-            {node.assignee && (
-              <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
-                <div className="w-4 h-4 bg-[#A855F7] rounded-full flex items-center justify-center text-white text-[8px] font-black">{node.assignee.username.charAt(0).toUpperCase()}</div>
-                <span className="text-xs font-bold text-gray-600 hidden md:block">{node.assignee.username}</span>
+            {node.assignees && node.assignees.length > 0 && (
+              <div className="flex -space-x-2">
+                {node.assignees.slice(0, 3).map((a, i) => (
+                  <div key={i} className="w-5 h-5 bg-[#A855F7] border-2 border-white rounded-full flex items-center justify-center text-white text-[8px] font-black z-[1]" title={a.user.username}>
+                    {a.user.username.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+                {node.assignees.length > 3 && (
+                  <div className="w-5 h-5 bg-gray-200 border-2 border-white rounded-full flex items-center justify-center text-gray-600 text-[6px] font-black z-[0]">
+                    +{node.assignees.length - 3}
+                  </div>
+                )}
               </div>
             )}
             <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full ${priorityStyle(node.priority)}`}>{node.priority}</span>
@@ -189,10 +214,12 @@ export default function ProjectDetailsPage() {
       </header>
 
       <div className="flex gap-2 border-b-2 border-gray-100 pb-0">
-        {(['tasks', 'members'] as const).map(tab => (
+        {(['tasks', 'timeline', 'members'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`px-6 py-3 font-black text-sm uppercase tracking-widest rounded-t-[16px] transition-all ${activeTab === tab ? 'bg-white shadow-lg text-gray-900 border-b-2 border-white -mb-[2px]' : 'text-gray-400 hover:text-gray-700'}`}>
-            {tab === 'tasks' ? `🗂 Tasks (${tasksTree.length})` : `👥 Members (${members.length})`}
+            className={`px-6 py-3 font-black text-sm uppercase tracking-widest rounded-t-[16px] transition-all ${activeTab === tab ? 'bg-[rgb(var(--bg-surface))] shadow-lg text-[rgb(var(--text-main))] border-b-2 border-[rgb(var(--bg-surface))] -mb-[2px]' : 'text-[rgb(var(--text-dim))] hover:text-[rgb(var(--text-main))]'}`}>
+            {tab === 'tasks' ? `🗂 Tasks (${tasksTree.length})` : 
+             tab === 'timeline' ? `📅 Timeline` :
+             `👥 Members (${members.length})`}
           </button>
         ))}
       </div>
@@ -201,7 +228,7 @@ export default function ProjectDetailsPage() {
         {activeTab === 'tasks' && (
           <>
             <div className="flex flex-wrap gap-3 mb-5 items-center">
-              <h3 className="font-black text-xl uppercase tracking-widest text-gray-800 flex-1">Task List</h3>
+              <h3 className="font-black text-xl uppercase tracking-widest text-[rgb(var(--text-main))] flex-1">Task List</h3>
               {isManager && (
                 <button onClick={() => setShowCreateModal(true)} className="bg-black text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg hover:bg-gray-800 transition-colors flex items-center gap-2">
                   <Plus className="w-4 h-4" /> New Task
@@ -235,37 +262,46 @@ export default function ProjectDetailsPage() {
 
             {isFiltering && <p className="text-xs font-black text-gray-400 uppercase mb-3">{filteredTasks.length} result{filteredTasks.length !== 1 ? 's' : ''}</p>}
 
-            {isLoading ? <div className="flex justify-center h-32 items-center"><Loader2 className="w-8 h-8 animate-spin text-[#3B82F6]" /></div>
-              : filteredTasks.length === 0 ? (
-                <div className="text-center py-20 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-                  <p className="text-gray-400 font-bold mb-4">{isFiltering ? 'No tasks match your filters.' : 'No tasks yet.'}</p>
-                  {!isFiltering && <button onClick={() => setShowCreateModal(true)} className="bg-black text-white px-8 py-4 rounded-full font-black text-sm uppercase tracking-widest">Create First Task</button>}
-                </div>
-              ) : <div>{filteredTasks.map(node => renderTaskRow(node))}</div>}
+            {isLoading ? (
+              <div className="flex justify-center h-32 items-center"><Loader2 className="w-8 h-8 animate-spin text-[#3B82F6]" /></div>
+            ) : filteredTasks.length === 0 ? (
+              <div className="text-center py-20 bg-[rgb(var(--bg-card))] rounded-3xl border border-dashed border-[rgb(var(--border-main))]">
+                <p className="text-[rgb(var(--text-muted))] font-bold mb-4">{isFiltering ? 'No tasks match your filters.' : 'No tasks yet.'}</p>
+                {!isFiltering && isManager && <button onClick={() => setShowCreateModal(true)} className="bg-black text-white px-8 py-4 rounded-full font-black text-sm uppercase tracking-widest">Create First Task</button>}
+              </div>
+            ) : (
+              <div>{filteredTasks.map(node => renderTaskRow(node))}</div>
+            )}
           </>
+        )}
+
+        {activeTab === 'timeline' && (
+          <div className="h-[650px]">
+            <GanttTimeline tasks={flattenTree(tasksTree)} />
+          </div>
         )}
 
         {activeTab === 'members' && (
           <>
             <div className="mb-6">
-              <h3 className="font-black text-xl uppercase tracking-widest text-gray-800 mb-4">Add Member</h3>
+              <h3 className="font-black text-xl uppercase tracking-widest text-[rgb(var(--text-main))] mb-4">Add Member</h3>
               <form onSubmit={handleAddMember} className="flex gap-3">
                 <input value={addMemberUsername} onChange={e => setAddMemberUsername(e.target.value)} placeholder="Enter exact username..."
-                  className="flex-1 bg-gray-50 border-2 border-gray-200 focus:border-[#5EE1CD] rounded-2xl px-5 py-3 font-bold outline-none transition-colors" />
+                  className="flex-1 bg-[rgb(var(--bg-app))] border-2 border-[rgb(var(--border-main))] focus:border-[#5EE1CD] rounded-2xl px-5 py-3 font-bold outline-none transition-colors text-[rgb(var(--text-main))]" />
                 <button type="submit" className="bg-black text-white px-6 py-3 rounded-2xl font-bold hover:bg-gray-800 transition-colors flex items-center gap-2"><UserPlus className="w-4 h-4" /> Add</button>
               </form>
               {addMemberError && <p className="text-red-500 font-bold text-sm mt-2">{addMemberError}</p>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {members.map(member => (
-                <div key={member.user_id} className="bg-gray-50 rounded-2xl p-5 flex items-center gap-4 border-2 border-transparent hover:border-[#A855F7]/30 transition-colors">
+                <div key={member.user_id} className="bg-[rgb(var(--bg-card))] rounded-2xl p-5 flex items-center gap-4 border-2 border-[rgb(var(--border-main))] hover:border-[#A855F7]/30 transition-colors">
                   <div className="w-12 h-12 bg-gradient-to-tr from-[#3B82F6] to-[#A855F7] rounded-full flex items-center justify-center text-white text-lg font-black flex-shrink-0">{member.username.charAt(0).toUpperCase()}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-black text-gray-900">{member.username}</p>
-                    <p className="text-xs text-gray-500 font-bold truncate">{member.email}</p>
-                    <span className="text-[10px] font-black uppercase bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{member.role}</span>
+                    <p className="font-black text-[rgb(var(--text-main))]">{member.username}</p>
+                    <p className="text-xs text-[rgb(var(--text-muted))] font-bold truncate">{member.email}</p>
+                    <span className="text-[10px] font-black uppercase bg-[rgb(var(--bg-app))] text-[rgb(var(--text-muted))] px-2 py-0.5 rounded-full">{member.role}</span>
                   </div>
-                  <button onClick={() => handleRemoveMember(member.user_id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => handleRemoveMember(member.user_id)} className="p-2 text-[rgb(var(--text-dim))] hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
@@ -288,17 +324,41 @@ export default function ProjectDetailsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-black uppercase text-gray-400 mb-1 block">Due Date</label>
-                  <input type="date" value={newTask.due_date} onChange={e => setNewTask(p => ({ ...p, due_date: e.target.value }))} className="w-full bg-gray-50 border-2 border-gray-200 focus:border-[#5EE1CD] rounded-2xl px-4 py-3 font-bold outline-none" />
+                  <label className="text-xs font-black uppercase text-[rgb(var(--text-dim))] mb-1 block">Start Date</label>
+                  <input type="date" value={newTask.planned_start_date} onChange={e => setNewTask(p => ({ ...p, planned_start_date: e.target.value }))} className="w-full bg-[rgb(var(--bg-app))] border-2 border-[rgb(var(--border-main))] focus:border-[#5EE1CD] rounded-2xl px-4 py-3 font-bold outline-none text-[rgb(var(--text-main))]" />
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase text-[rgb(var(--text-dim))] mb-1 block">Due Date</label>
+                  <input type="date" value={newTask.due_date} onChange={e => setNewTask(p => ({ ...p, due_date: e.target.value }))} className="w-full bg-[rgb(var(--bg-app))] border-2 border-[rgb(var(--border-main))] focus:border-[#5EE1CD] rounded-2xl px-4 py-3 font-bold outline-none text-[rgb(var(--text-main))]" />
                 </div>
               </div>
         {isManager && (
               <div>
-                <label className="text-xs font-black uppercase text-gray-400 mb-1 block">Assign to</label>
-                <select value={newTask.assignee_id} onChange={e => setNewTask(p => ({ ...p, assignee_id: e.target.value }))} className="w-full bg-gray-50 border-2 border-gray-200 focus:border-[#5EE1CD] rounded-2xl px-4 py-3 font-bold outline-none appearance-none">
-                  <option value="">— Unassigned —</option>
-                  {allUsers.map(u => <option key={u.user_id} value={u.user_id}>{u.username} ({u.role})</option>)}
-                </select>
+                <label className="text-xs font-black uppercase text-gray-400 mb-2 block">Assign to</label>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-4 bg-gray-50 rounded-2xl border-2 border-gray-100 custom-scrollbar">
+                  {members.map(u => (
+                    <button
+                      key={u.user_id}
+                      type="button"
+                      onClick={() => {
+                        const isSelected = newTask.assignee_ids.includes(u.user_id);
+                        setNewTask(p => ({
+                          ...p,
+                          assignee_ids: isSelected 
+                            ? p.assignee_ids.filter(id => id !== u.user_id)
+                            : [...p.assignee_ids, u.user_id]
+                        }));
+                      }}
+                      className={`px-4 py-2 rounded-full text-[10px] font-black transition-all ${
+                        newTask.assignee_ids.includes(u.user_id)
+                          ? 'bg-[#A855F7] text-white shadow-md'
+                          : 'bg-white text-gray-400 border border-gray-100'
+                      }`}
+                    >
+                      {u.username}
+                    </button>
+                  ))}
+                </div>
               </div>
               )}
               <div className="flex gap-3 pt-2">
