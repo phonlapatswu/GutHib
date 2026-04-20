@@ -136,7 +136,7 @@ export default function DashboardHome() {
         {/* Right Column */}
         <div className="space-y-10">
           
-          {/* Project Widget */}
+          {/* Project Widget with completion stats */}
           <div className="bg-white rounded-[40px] p-8 shadow-2xl border-4 border-gray-100 transform transition-transform hover:-translate-y-1 flex flex-col h-[400px]">
              <div className="flex justify-between items-end mb-6">
               <h3 className="font-black text-2xl uppercase text-gray-800">Projects</h3>
@@ -151,23 +151,35 @@ export default function DashboardHome() {
                 NEW PROJECT
               </button>
               
-              {projects.map((project) => (
+              {(projects as any[]).map((project) => (
                 <Link 
                   href={`/projects/${project.project_id}`}
                   key={project.project_id} 
-                  className="bg-white border-2 border-gray-100 hover:border-[#A855F7]/50 p-4 rounded-[20px] flex items-center gap-5 transition-all cursor-pointer group hover:shadow-md block"
+                  className="bg-white border-2 border-gray-100 hover:border-[#A855F7]/50 p-4 rounded-[20px] transition-all cursor-pointer group hover:shadow-md block"
                 >
-                  <div className="w-14 h-14 bg-[#f1f5f9] group-hover:bg-[#A855F7]/10 rounded-[16px] overflow-hidden flex flex-shrink-0 items-center justify-center text-2xl transition-colors">
-                    🚀
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="w-12 h-12 bg-[#f1f5f9] group-hover:bg-[#A855F7]/10 rounded-[14px] flex items-center justify-center text-xl flex-shrink-0 transition-colors">🚀</div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-black text-gray-900 uppercase tracking-tight truncate">{project.title}</h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs font-bold text-gray-400">{project._count?.tasks || 0} tasks</span>
+                        <span className="text-gray-200">·</span>
+                        <span className="text-xs font-bold text-[#A855F7]">{project.completionRate ?? 0}% done</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-black text-gray-900 text-lg uppercase tracking-tight truncate">{project.title}</h4>
-                    <p className="text-xs font-bold text-gray-400 mt-1">Created {new Date(project.created_at).toLocaleDateString()}</p>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-[#5EE1CD] to-[#3B82F6] transition-all duration-500"
+                      style={{ width: `${project.completionRate ?? 0}%` }}
+                    />
                   </div>
                 </Link>
               ))}
             </div>
           </div>
+
 
           {/* Private Notepad Widget */}
           <div className="bg-gradient-to-br from-[#fdfbfb] to-[#ebedee] rounded-[40px] p-8 shadow-2xl border-4 border-gray-100 h-[420px] flex flex-col relative overflow-hidden">

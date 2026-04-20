@@ -2,8 +2,9 @@ import { Router, Request, Response } from 'express';
 import { Task } from '@prisma/client';
 import prisma from '../db';
 import { updateTaskStatus, createTask, getTask, updateTask, deleteTask } from '../controllers/taskController';
-import { getProjects, createProject, getProjectMembers, addMember, removeMember } from '../controllers/projectController';
+import { getProjects, createProject, getProjectMembers, addMember, removeMember, archiveProject, deleteProject } from '../controllers/projectController';
 import { createSubmission, reviewSubmission } from '../controllers/submissionController';
+import { getComments, createComment, deleteComment } from '../controllers/commentController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -12,6 +13,8 @@ router.use(authenticateToken);
 // Projects
 router.get('/', getProjects);
 router.post('/', createProject);
+router.patch('/:id/archive', archiveProject);
+router.delete('/:id', deleteProject);
 
 // Project Members
 router.get('/:id/members', getProjectMembers);
@@ -25,30 +28,29 @@ router.post('/:projectId/tasks', createTask);
 router.get('/:projectId/tasks/:taskId', getTask);
 router.put('/:projectId/tasks/:taskId', updateTask);
 router.delete('/:projectId/tasks/:taskId', deleteTask);
-
-// Task status update
 router.patch('/:projectId/tasks/:taskId/status', updateTaskStatus);
 
-// Task submission workflow
+// Task workflow
 router.post('/:projectId/tasks/:taskId/submit', createSubmission);
 router.patch('/:projectId/tasks/:taskId/review', reviewSubmission);
 
-// Helper interface to construct the tree
-interface TaskNode extends Task {
-  sub_tasks: TaskNode[];
-}
+// Task Comments
+router.get('/:projectId/tasks/:taskId/comments', getComments);
+router.post('/:projectId/tasks/:taskId/comments', createComment);
+router.delete('/:projectId/tasks/:taskId/comments/:commentId', deleteComment);
+
+// Helper interface for task tree
+interface TaskNode extends Task { sub_tasks: TaskNode[]; }
 
 // GET /api/projects/:id/tasks — returns nested tree
 router.get('/:id/tasks', async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.id as string, 10);
-    if (isNaN(projectId)) { res.status(400).json({ error: 'Invalid project ID format' }); return; }
+    if (isNaN(projectId)) { res.status(400).json({ error: 'Invalid project ID' }); return; }
 
     const tasks = await prisma.task.findMany({
       where: { project_id: projectId },
-      include: {
-        assignee: { select: { user_id: true, username: true } },
-      },
+      include: { assignee: { select: { user_id: true, username: true } } },
       orderBy: { created_at: 'asc' },
     });
 
@@ -56,7 +58,6 @@ router.get('/:id/tasks', async (req: Request, res: Response): Promise<void> => {
 
     const taskMap = new Map<number, TaskNode>();
     const rootTasks: TaskNode[] = [];
-
     tasks.forEach(task => taskMap.set(task.task_id, { ...task, sub_tasks: [] }));
     tasks.forEach(task => {
       const node = taskMap.get(task.task_id);
@@ -65,9 +66,7 @@ router.get('/:id/tasks', async (req: Request, res: Response): Promise<void> => {
           const parent = taskMap.get(task.parent_task_id);
           if (parent) parent.sub_tasks.push(node);
           else rootTasks.push(node);
-        } else {
-          rootTasks.push(node);
-        }
+        } else { rootTasks.push(node); }
       }
     });
 

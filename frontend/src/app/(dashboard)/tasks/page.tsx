@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { CheckCircle2, CircleDashed, Loader2 } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { CheckCircle2, CircleDashed, Loader2, Search, XCircle } from 'lucide-react';
 import api from '@/lib/api';
 
 interface Task {
@@ -17,6 +18,8 @@ interface Task {
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -54,6 +57,18 @@ export default function TasksPage() {
     }
   };
 
+  const isOverdue = (due_date: string | null, status: string) =>
+    due_date && status !== 'Closed' && new Date(due_date) < new Date();
+  const isDueSoon = (due_date: string | null, status: string) => {
+    if (!due_date || status === 'Closed') return false;
+    const diff = new Date(due_date).getTime() - Date.now();
+    return diff > 0 && diff < 2 * 24 * 60 * 60 * 1000;
+  };
+
+  const filteredTasks = useMemo(() =>
+    searchQuery ? tasks.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase())) : tasks
+  , [tasks, searchQuery]);
+
   const getProgressVisuals = (status: Task['status']) => {
     switch (status) {
       case 'Closed': return { width: '100%', bg: 'bg-[#16a34a]', textBg: 'bg-[#16a34a]/10 text-[#16a34a] border-2 border-[#16a34a]/20', label: 'Done' };
@@ -65,10 +80,16 @@ export default function TasksPage() {
 
   return (
     <div className="max-w-7xl mx-auto h-full p-4 md:p-10 flex flex-col">
-      <header className="mb-10 flex justify-between items-end">
+      <header className="mb-8 flex flex-wrap justify-between items-end gap-4">
         <div>
           <h2 className="text-5xl md:text-6xl font-black uppercase tracking-tight text-gray-900 border-b-8 border-[#A855F7] inline-block pb-2">My Tasks</h2>
-          <p className="font-bold text-gray-500 mt-4 text-lg">Manage your ongoing quests and assignments. Click the status to update it instantly!</p>
+          <p className="font-bold text-gray-500 mt-4 text-lg">Your assigned tasks. Click a task to open it, or click status to cycle it.</p>
+        </div>
+        {/* Search */}
+        <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 border-2 border-gray-100 focus-within:border-[#A855F7] transition-colors shadow-sm">
+          <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search tasks..." className="outline-none font-bold text-sm w-44 bg-transparent" />
+          {searchQuery && <button onClick={() => setSearchQuery('')}><XCircle className="w-4 h-4 text-gray-400" /></button>}
         </div>
       </header>
 
@@ -82,9 +103,14 @@ export default function TasksPage() {
             <h3 className="text-2xl font-black text-gray-400 uppercase">No tasks found!</h3>
             <p className="text-gray-500 mt-2 font-bold">You are totally free right now.</p>
           </div>
+        ) : filteredTasks.length === 0 ? (
+          <div className="text-center bg-white rounded-[40px] p-20 shadow-xl border-4 border-gray-100">
+            <h3 className="text-2xl font-black text-gray-400 uppercase">{searchQuery ? 'No matches found' : 'No tasks found!'}</h3>
+            <p className="text-gray-500 mt-2 font-bold">{searchQuery ? 'Try a different search term.' : 'You are totally free right now.'}</p>
+          </div>
         ) : (
           <>
-            {/* Table Header Wrapper */}
+            {/* Table Header */}
             <div className="hidden md:flex items-center px-8 py-4 mb-4 text-xs font-black uppercase text-gray-400 tracking-widest">
               <div className="w-1/4">Task Name</div>
               <div className="w-1/6">Project</div>
@@ -96,9 +122,10 @@ export default function TasksPage() {
 
             {/* Task Rows */}
             <div className="space-y-6">
-              {tasks.map((task) => {
+              {filteredTasks.map((task) => {
                 const visual = getProgressVisuals(task.status);
-                
+                const overdue = isOverdue(task.due_date, task.status);
+                const dueSoon = isDueSoon(task.due_date, task.status);
                 return (
                   <div 
                     key={task.task_id} 
@@ -108,11 +135,17 @@ export default function TasksPage() {
                     {/* Task Name */}
                     <div className="md:w-1/4 flex items-center gap-4 overflow-hidden">
                       {task.status === 'Closed' ? (
-                        <CheckCircle2 className="text-[#16a34a] w-8 h-8 flex-shrink-0" />
-                      ) : (
-                        <CircleDashed className="text-gray-300 group-hover:text-[#5EE1CD] w-8 h-8 flex-shrink-0 transition-colors" />
-                      )}
-                      <span className="font-black text-xl text-gray-900 truncate" title={task.title}>{task.title}</span>
+                      <CheckCircle2 className="text-[#16a34a] w-8 h-8 flex-shrink-0" />
+                    ) : (
+                      <CircleDashed className="text-gray-300 group-hover:text-[#5EE1CD] w-8 h-8 flex-shrink-0 transition-colors" />
+                    )}
+                    <div className="min-w-0">
+                      <span className="font-black text-xl text-gray-900 truncate block" title={task.title}>{task.title}</span>
+                      <div className="flex gap-2 mt-0.5">
+                        {overdue && <span className="text-[9px] font-black bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">OVERDUE</span>}
+                        {dueSoon && !overdue && <span className="text-[9px] font-black bg-yellow-400 text-white px-2 py-0.5 rounded-full">DUE SOON</span>}
+                      </div>
+                    </div>
                     </div>
 
                     {/* Project */}
@@ -130,7 +163,7 @@ export default function TasksPage() {
                     </div>
 
                     {/* Due Date */}
-                    <div className="md:w-1/6 font-bold text-[#3B82F6]">
+                    <div className={`md:w-1/6 font-bold ${overdue ? 'text-red-500' : dueSoon ? 'text-yellow-600' : 'text-[#3B82F6]'}`}>
                       <span className="md:hidden text-xs text-gray-400 uppercase tracking-widest block mb-1">Due Date</span>
                       {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
                     </div>

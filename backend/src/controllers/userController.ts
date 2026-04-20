@@ -54,6 +54,27 @@ export const getInboxLogs = async (req: Request, res: Response): Promise<void> =
   }
 };
 
+export const getInboxCount = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.user_id;
+    // Count recent logs (last 24h) not triggered by self
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const count = await prisma.commitLog.count({
+      where: {
+        timestamp: { gte: since },
+        user_id: { not: userId }, // not self-actions
+        OR: [
+          { task: { assignee_id: userId } }, // actions on my tasks
+        ],
+      },
+    });
+    res.json({ unread: count });
+  } catch (error) {
+    console.error('Error fetching inbox count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const getMyProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.user_id;

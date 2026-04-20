@@ -19,6 +19,7 @@ model User {
   tasks         Task[]
   messages      Message[]
   memberships   ProjectMember[]
+  comments      TaskComment[]
 
   @@map("users")
 }
@@ -55,6 +56,7 @@ model Task {
   merged_at      DateTime?     @db.Timestamptz(6)
   commits        CommitLog[]
   submissions    Submission[]
+  comments       TaskComment[]
   assignee       User?         @relation(fields: [assignee_id], references: [user_id], onUpdate: NoAction)
   parent_task    Task?         @relation("TaskToTask", fields: [parent_task_id], references: [task_id], onUpdate: NoAction)
   sub_tasks      Task[]        @relation("TaskToTask")
@@ -151,4 +153,19 @@ model ProjectMember {
 
   @@unique([project_id, user_id])
   @@map("project_members")
+}
+
+model TaskComment {
+  comment_id Int      @id @default(autoincrement())
+  task_id    Int
+  author_id  Int
+  content    String   @db.Text
+  file_url   String?  @db.VarChar(500)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  task       Task     @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
+  author     User     @relation(fields: [author_id], references: [user_id], onDelete: Cascade)
+
+  @@index([task_id])
+  @@index([created_at(sort: Desc)])
+  @@map("task_comments")
 }
