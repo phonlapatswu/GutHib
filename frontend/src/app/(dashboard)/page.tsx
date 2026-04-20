@@ -30,6 +30,7 @@ export default function DashboardHome() {
   const [team, setTeam] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [note, setNote] = useState('');
+  const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
 
   useEffect(() => {
     // Load local notepad
@@ -38,15 +39,17 @@ export default function DashboardHome() {
 
     const fetchData = async () => {
       try {
-        const [tasksRes, usersRes, projectsRes] = await Promise.all([
+        const [tasksRes, usersRes, projectsRes, userRes] = await Promise.all([
           api.get('/users/me/tasks'),
           api.get('/users'),
           api.get('/projects'),
+          api.get('/auth/me'),
         ]);
 
-        setTasks(tasksRes.data.slice(0, 4)); // Only show top 4 on dashboard
+        setTasks(tasksRes.data.slice(0, 4));
         setTeam(usersRes.data);
         setProjects(projectsRes.data);
+        setCurrentUser(userRes.data);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
       }
@@ -70,6 +73,8 @@ export default function DashboardHome() {
       alert("Failed to create project: " + (error.response?.data?.error || "Unknown"));
     }
   };
+
+  const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'Admin';
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-10">
@@ -144,12 +149,14 @@ export default function DashboardHome() {
             </div>
             
             <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-2">
-              <button onClick={handleCreateProject} className="w-full bg-black text-white hover:bg-gray-800 transition-colors p-5 rounded-[20px] flex items-center justify-center gap-3 font-bold text-lg shadow-xl shadow-black/20 group sticky top-0 z-10">
-                <div className="bg-[#5EE1CD] rounded-full p-1 text-black group-hover:scale-110 transition-transform">
-                  <Plus className="w-5 h-5" />
-                </div>
-                NEW PROJECT
-              </button>
+              {isManager && (
+                <button onClick={handleCreateProject} className="w-full bg-black text-white hover:bg-gray-800 transition-colors p-5 rounded-[20px] flex items-center justify-center gap-3 font-bold text-lg shadow-xl shadow-black/20 group sticky top-0 z-10">
+                  <div className="bg-[#5EE1CD] rounded-full p-1 text-black group-hover:scale-110 transition-transform">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  NEW PROJECT
+                </button>
+              )}
               
               {(projects as any[]).map((project) => (
                 <Link 

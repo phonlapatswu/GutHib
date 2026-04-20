@@ -5,24 +5,25 @@ import { updateTaskStatus, createTask, getTask, updateTask, deleteTask } from '.
 import { getProjects, createProject, getProjectMembers, addMember, removeMember, archiveProject, deleteProject } from '../controllers/projectController';
 import { createSubmission, reviewSubmission } from '../controllers/submissionController';
 import { getComments, createComment, deleteComment } from '../controllers/commentController';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken, requireRole } from '../middleware/authMiddleware';
 
 const router = Router();
 router.use(authenticateToken);
 
-// Projects
+// Projects — read: anyone | write: Manager+ only
 router.get('/', getProjects);
-router.post('/', createProject);
-router.patch('/:id/archive', archiveProject);
-router.delete('/:id', deleteProject);
+router.post('/', requireRole('Manager'), createProject);
+router.patch('/:id/archive', requireRole('Manager'), archiveProject);
+router.delete('/:id', requireRole('Manager'), deleteProject);
 
-// Project Members
+// Project Members — Manager+ only can manage
 router.get('/:id/members', getProjectMembers);
-router.post('/:id/members', addMember);
-router.delete('/:id/members/:userId', removeMember);
+router.post('/:id/members', requireRole('Manager'), addMember);
+router.delete('/:id/members/:userId', requireRole('Manager'), removeMember);
 
-// Tasks — list + create
-router.post('/:projectId/tasks', createTask);
+// Tasks — Manager creates & assigns; Workers/Requesters just read & update status
+router.post('/:projectId/tasks', requireRole('Manager'), createTask);
+
 
 // Tasks — individual CRUD
 router.get('/:projectId/tasks/:taskId', getTask);

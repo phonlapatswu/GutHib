@@ -62,7 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {currentUser && (
           <div className="mx-4 mb-6 bg-gradient-to-r from-[#3B82F6]/10 to-[#A855F7]/10 rounded-[20px] p-4 flex items-center gap-3 flex-shrink-0">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black flex-shrink-0 ${
-              currentUser.role === 'Admin' ? 'bg-red-500' : currentUser.role === 'Requester' ? 'bg-[#3B82F6]' : 'bg-[#A855F7]'
+              currentUser.role === 'Admin' ? 'bg-red-500' : currentUser.role === 'Manager' ? 'bg-emerald-500' : currentUser.role === 'Requester' ? 'bg-[#3B82F6]' : 'bg-[#A855F7]'
             }`}>
               {currentUser.username.charAt(0).toUpperCase()}
             </div>
@@ -70,6 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="font-black text-gray-900 text-sm truncate">{currentUser.username}</p>
               <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
                 currentUser.role === 'Admin' ? 'bg-red-100 text-red-600' :
+                currentUser.role === 'Manager' ? 'bg-emerald-100 text-emerald-600' :
                 currentUser.role === 'Requester' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'
               }`}>{currentUser.role}</span>
             </div>

@@ -5,7 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_local_dev';
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Format: "Bearer <token>"
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     res.status(401).json({ error: 'Access denied. No token provided.' });
@@ -17,9 +17,32 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
       res.status(403).json({ error: 'Invalid token.' });
       return;
     }
-
-    // Attach user payload to the request object
     (req as any).user = user;
     next();
   });
+};
+
+/**
+ * Middleware factory: allows access only to roles in the allowedRoles list.
+ * Admin always has access regardless.
+ */
+export const requireRole = (...allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const userRole = (req as any).user?.role;
+
+    if (!userRole) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    // Admin always passes
+    if (userRole === 'Admin' || allowedRoles.includes(userRole)) {
+      next();
+      return;
+    }
+
+    res.status(403).json({
+      error: `Access denied. Required role: ${allowedRoles.join(' or ')}. Your role: ${userRole}.`,
+    });
+  };
 };

@@ -93,7 +93,7 @@ export default function AdminPage() {
               {/* Avatar + Name */}
               <div className="col-span-2 flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-black text-white flex-shrink-0 ${
-                  user.role === 'Admin' ? 'bg-red-500' : user.role === 'Requester' ? 'bg-[#3B82F6]' : 'bg-[#A855F7]'
+                  user.role === 'Admin' ? 'bg-red-500' : user.role === 'Manager' ? 'bg-emerald-500' : user.role === 'Requester' ? 'bg-[#3B82F6]' : 'bg-[#A855F7]'
                 }`}>
                   {user.username.charAt(0).toUpperCase()}
                 </div>
@@ -114,11 +114,13 @@ export default function AdminPage() {
                   onChange={e => handleChangeRole(user.user_id, e.target.value)}
                   className={`bg-white border-2 rounded-xl px-3 py-2 font-black text-xs uppercase outline-none transition-colors cursor-pointer ${
                     user.role === 'Admin' ? 'border-red-300 text-red-600' :
+                    user.role === 'Manager' ? 'border-emerald-300 text-emerald-600' :
                     user.role === 'Requester' ? 'border-blue-300 text-blue-600' : 'border-purple-300 text-purple-600'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <option value="Worker">Worker</option>
                   <option value="Requester">Requester</option>
+                  <option value="Manager">Manager</option>
                   <option value="Admin">Admin</option>
                 </select>
               </div>

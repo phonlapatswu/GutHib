@@ -129,8 +129,10 @@ enum task_status {
 enum user_role {
   Requester
   Worker
+  Manager
   Admin
 }
+
 
 model Message {
   message_id Int      @id @default(autoincrement())

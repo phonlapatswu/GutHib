@@ -129,6 +129,7 @@ export default function ProjectDetailsPage() {
 
   const priorityStyle = (p: string) => ({ High: 'bg-red-100 text-red-600', Low: 'bg-green-100 text-green-600' } as any)[p] || 'bg-yellow-100 text-yellow-700';
   const isOwner = projectInfo?.owner_id === currentUser?.user_id || currentUser?.role === 'Admin';
+  const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'Admin';
 
   const renderTaskRow = (node: TaskNode, depth = 0): React.ReactNode => {
     const overdue = isOverdue(node.due_date, node.status);
@@ -201,10 +202,13 @@ export default function ProjectDetailsPage() {
           <>
             <div className="flex flex-wrap gap-3 mb-5 items-center">
               <h3 className="font-black text-xl uppercase tracking-widest text-gray-800 flex-1">Task List</h3>
-              <button onClick={() => setShowCreateModal(true)} className="bg-black text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg hover:bg-gray-800 transition-colors flex items-center gap-2">
-                <Plus className="w-4 h-4" /> New Task
-              </button>
+              {isManager && (
+                <button onClick={() => setShowCreateModal(true)} className="bg-black text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg hover:bg-gray-800 transition-colors flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> New Task
+                </button>
+              )}
             </div>
+
 
             {/* Search & Filter */}
             <div className="flex flex-wrap gap-3 mb-5 p-4 bg-gray-50 rounded-2xl">
@@ -288,6 +292,7 @@ export default function ProjectDetailsPage() {
                   <input type="date" value={newTask.due_date} onChange={e => setNewTask(p => ({ ...p, due_date: e.target.value }))} className="w-full bg-gray-50 border-2 border-gray-200 focus:border-[#5EE1CD] rounded-2xl px-4 py-3 font-bold outline-none" />
                 </div>
               </div>
+        {isManager && (
               <div>
                 <label className="text-xs font-black uppercase text-gray-400 mb-1 block">Assign to</label>
                 <select value={newTask.assignee_id} onChange={e => setNewTask(p => ({ ...p, assignee_id: e.target.value }))} className="w-full bg-gray-50 border-2 border-gray-200 focus:border-[#5EE1CD] rounded-2xl px-4 py-3 font-bold outline-none appearance-none">
@@ -295,6 +300,7 @@ export default function ProjectDetailsPage() {
                   {allUsers.map(u => <option key={u.user_id} value={u.user_id}>{u.username} ({u.role})</option>)}
                 </select>
               </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black uppercase text-sm hover:bg-gray-200 transition-colors">Cancel</button>
                 <button type="submit" className="flex-1 bg-black text-white py-4 rounded-2xl font-black uppercase text-sm hover:bg-gray-800 transition-colors">Create Task</button>

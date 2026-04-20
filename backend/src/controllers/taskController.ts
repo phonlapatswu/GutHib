@@ -50,11 +50,16 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
   try {
     const projectId = parseInt(req.params.projectId as string, 10);
     const { title, description, assignee_id, due_date, priority } = req.body;
+    const requesterRole = (req as any).user?.role;
 
     if (isNaN(projectId) || !title) {
       res.status(400).json({ error: 'Valid project ID and title are required' });
       return;
     }
+
+    // Only Manager and Admin can assign tasks to others
+    const canAssign = requesterRole === 'Manager' || requesterRole === 'Admin';
+    const resolvedAssigneeId = canAssign && assignee_id ? parseInt(assignee_id, 10) : null;
 
     const task = await prisma.task.create({
       data: {
@@ -62,7 +67,7 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
         title,
         description,
         priority: priority as task_priority || task_priority.Medium,
-        assignee_id: assignee_id ? parseInt(assignee_id, 10) : null,
+        assignee_id: resolvedAssigneeId,
         due_date: due_date ? new Date(due_date) : null,
       },
       include: {
@@ -71,7 +76,7 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
       }
     });
 
-    // Log the creation as a Claim action if assigned
+    // Log the assignment as a Claim action
     if (task.assignee_id) {
       await prisma.commitLog.create({
         data: {
@@ -139,11 +144,16 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
     }
 
     const { title, description, assignee_id, due_date, priority, status } = req.body;
+    const requesterRole = (req as any).user?.role;
+    const canAssign = requesterRole === 'Manager' || requesterRole === 'Admin';
 
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (assignee_id !== undefined) updateData.assignee_id = assignee_id ? parseInt(assignee_id, 10) : null;
+    // Only Manager/Admin may change the assignee
+    if (assignee_id !== undefined && canAssign) {
+      updateData.assignee_id = assignee_id ? parseInt(assignee_id, 10) : null;
+    }
     if (due_date !== undefined) updateData.due_date = due_date ? new Date(due_date) : null;
     if (priority !== undefined) updateData.priority = priority as task_priority;
     if (status !== undefined && Object.values(task_status).includes(status)) {
@@ -171,8 +181,16 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
 export const deleteTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const taskId = parseInt(req.params.taskId as string, 10);
+    const requesterRole = (req as any).user?.role;
+
     if (isNaN(taskId)) {
       res.status(400).json({ error: 'Invalid task ID' });
+      return;
+    }
+
+    // Only Manager and Admin can delete tasks
+    if (requesterRole !== 'Manager' && requesterRole !== 'Admin') {
+      res.status(403).json({ error: 'Only Managers can delete tasks' });
       return;
     }
 
