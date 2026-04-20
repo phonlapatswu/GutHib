@@ -17,23 +17,20 @@ Track the development progress of the Shark Task Platform.
 - **Activity Inbox**: Real CommitLog-based timeline of all task events.
 - **Analytics Page**: Visual stats on task status distribution.
 - **Automated Testing**: Jest + Supertest test suite (29 tests, all passing, zero mocks).
+- **Role Manager (Enterprise RBAC)**: Added Manager role. Only Managers/Admins can create projects/tasks, assign tasks, and delete projects/tasks.
+- **Task Comments/Discussions**: ให้ทีมคุยกันภายใน Task ได้ ไม่ต้องออกไปที่แชทหลัก
+- **File Attachments on Tasks**: แนบไฟล์ / ลิงก์รูปใน Task
+- **Task Search & Filter**: ค้นหา Task ตามชื่อ, กรองตาม Priority / Status / Assignee
+- **Notification Badge**: แสดงจำนวน inbox ใหม่บน Sidebar (Polling 30s)
+- **Task Sub-task Creation UI**: สร้าง Sub-task ได้จากหน้า Task Detail 
+- **Due Date Reminders / Overdue Badge**: แสดงเตือนเมื่องานใกล้ครบกำหนดหรือเลย deadline
+- **Project Archive/Delete**: Owner/Admin/Manager สามารถปิดหรือลบโปรเจกต์ได้
+- **Dashboard Stats Enhancement**: แสดง % completion ต่อโปรเจกต์บนหน้าหลัก
 
 ## 🟡 In Progress
 *(No tasks currently in progress)*
 
 ## 🔴 To Do (แนะนำให้ทำต่อ — เรียงตามความสำคัญ)
-
-### Priority 1 — UX & Usability (ผู้ใช้งานรู้สึกได้ทันที)
-- **Task Comments/Discussions**: ให้ทีมคุยกันภายใน Task ได้ ไม่ต้องออกไปที่แชทหลัก
-- **File Attachments on Tasks**: แนบไฟล์ / ลิงก์รูปใน Task (เชื่อมกับ Submission ที่มีอยู่)
-- **Task Search & Filter**: ค้นหา Task ตามชื่อ, กรองตาม Priority / Status / Assignee / Due Date
-- **Notification Badge**: แสดงจำนวน inbox ใหม่บน Sidebar โดยไม่ต้องเปิดหน้า Inbox
-
-### Priority 2 — Project Scale (ขยายระบบให้ออแกไนส์มากขึ้น)
-- **Task Sub-task Creation UI**: สร้าง Sub-task ได้จากหน้า Task Detail (ตอนนี้ DB รองรับแล้ว แต่ยังไม่มี UI)
-- **Due Date Reminders / Overdue Badge**: แสดงเตือนเมื่องานใกล้ครบกำหนดหรือเลย deadline
-- **Project Archive/Delete**: Owner สามารถปิดหรือลบโปรเจกต์ได้
-- **Dashboard Stats Enhancement**: แสดง % completion ต่อโปรเจกต์บนหน้าหลัก
 
 ### Priority 3 — Team Scale (สำหรับองค์กรที่ใหญ่ขึ้น)
 - **Email Notifications**: ส่งอีเมลแจ้งเตือนเมื่อถูก Assign / งานใกล้ครบกำหนด
