@@ -9,15 +9,16 @@ import messageRoutes from './routes/messages';
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// --- Middleware Stack ---
+app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use(express.json()); // Parse incoming JSON payloads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // Serve static assets
 
-// Main Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/projects', taskRoutes);
-app.use('/api/messages', messageRoutes);
+// --- RESTful API Routes ---
+app.use('/api/auth', authRoutes); // Authentication (Login/Register)
+app.use('/api/users', userRoutes); // User Profiles & Settings
+app.use('/api/projects', taskRoutes); // Project & Task Business Logic
+app.use('/api/messages', messageRoutes); // Real-time Communication
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Shark Task API is running' });
