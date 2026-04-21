@@ -7,6 +7,10 @@ let io: SocketIOServer | null = null;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
 
+/**
+ * Initializes the Socket.io server with CORS and Authentication middleware.
+ * Binds the socket server to the existing HTTP server instance.
+ */
 export const initSocket = (server: HTTPServer) => {
   io = new SocketIOServer(server, {
     cors: {
@@ -15,6 +19,10 @@ export const initSocket = (server: HTTPServer) => {
     }
   });
 
+  /**
+   * Socket Authentication Middleware
+   * Validates JWT token passed via auth object or headers.
+   */
   io.use((socket, next) => {
     const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
     if (!token) return next(new Error('Authentication error'));
@@ -29,6 +37,10 @@ export const initSocket = (server: HTTPServer) => {
     }
   });
 
+  /**
+   * Main Connection Handler
+   * Manages private rooms and project-specific broadcasting rooms.
+   */
   io.on('connection', async (socket) => {
     const userId = (socket as any).user.user_id;
     console.log(`User connected: ${userId}`);
