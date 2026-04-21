@@ -25,6 +25,7 @@ export default function GanttTimeline({ tasks }: GanttTimelineProps) {
   /**
    * Calculate date range for the chart bounding box.
    * Auto-adjusts view based on the earliest and latest task dates in the project.
+   * PERFORMANCE: memoized to prevent expensive re-calculations on every render.
    */
   const { startDate, endDate, daysCount, dateHeader } = useMemo(() => {
     // Collect all unique task dates for range determination
