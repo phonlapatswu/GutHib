@@ -15,6 +15,7 @@ interface CurrentUser { user_id: number; username: string; email: string; role: 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  // --- State Management ---
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [inboxCount, setInboxCount] = useState(0);
@@ -24,6 +25,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+  /**
+   * Fetches unread counts for inbox and messages
+   */
   const fetchCounts = useCallback(async () => {
     try {
       const [inboxRes, msgRes] = await Promise.all([
@@ -32,9 +36,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ]);
       setInboxCount(inboxRes.data.unread || 0);
       setUnreadMsgCount(msgRes.data.totalUnread || 0);
-    } catch (e) { /* silent */ }
+    } catch (e) { /* silent fail for counts */ }
   }, []);
 
+  /**
+   * Initial data fetch and Socket.io event rigging
+   */
   useEffect(() => {
     const socket = getSocket();
     
@@ -45,19 +52,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setCurrentUser(userRes.data);
         await fetchCounts();
         
-        // Connect socket and listen
+        // Socket.io Real-time handlers
         socket.connect();
-        socket.on('unread_count_update', () => {
-           console.log('Real-time count update triggered');
-           fetchCounts();
-        });
-        
+        socket.on('unread_count_update', () => fetchCounts());
         socket.on('user_updated', () => {
-           console.log('User profile update triggered');
            api.get('/auth/me').then(res => setCurrentUser(res.data)).catch(console.error);
         });
-        
-        // Also listen for new messages to update counts immediately
         socket.on('new_message', () => fetchCounts());
 
       } catch (error) { console.error("Failed to fetch sidebar data", error); }
