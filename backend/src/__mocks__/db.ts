@@ -10,10 +10,12 @@ const prismaMock = {
   },
   project: {
     findMany: jest.fn(),
+    findUnique: jest.fn(),
     findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    count: jest.fn(),
   },
   task: {
     findMany: jest.fn(),
@@ -21,10 +23,16 @@ const prismaMock = {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    groupBy: jest.fn(),
+    count: jest.fn(),
   },
   message: {
     findMany: jest.fn(),
     create: jest.fn(),
+    count: jest.fn(),
+  },
+  projectReadReceipt: {
+    findUnique: jest.fn(),
   },
   commitLog: {
     findMany: jest.fn(),

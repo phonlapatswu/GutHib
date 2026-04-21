@@ -14,14 +14,30 @@ function makeToken(userId: number, role = 'Worker') {
   return jwt.sign({ user_id: userId, username: 'testuser', role }, JWT_SECRET, { expiresIn: '1h' });
 }
 
+/**
+ * Integration Tests for Project Management API
+ * Verifies project lifecycle: creation, listing, and task attachment.
+ * Validates RBAC (Role-Based Access Control) using mocked administrative tokens.
+ */
 describe('📂 Projects API', () => {
 
   // ─────────────────── GET /api/projects ───────────────────
+  /**
+   * Test Suite: Project Listing
+   * Verifies that only authenticated users can access the project list.
+   * Mocks all sub-queries (GroupBy, ReadReceipts, Messages) added during optimization.
+   */
   describe('GET /api/projects', () => {
     it('should return a list of projects when authenticated', async () => {
+      // Mock main project query
       mockPrisma.project.findMany.mockResolvedValue([
         { project_id: 1, title: 'Shark Task MVP', owner: { username: 'admin' }, created_at: new Date() },
       ]);
+
+      // Mock sub-queries for stats/read-receipts
+      mockPrisma.task.groupBy.mockResolvedValue([]);
+      mockPrisma.projectReadReceipt.findUnique.mockResolvedValue(null);
+      mockPrisma.message.count.mockResolvedValue(0);
 
       const res = await request(app)
         .get('/api/projects')
@@ -40,6 +56,10 @@ describe('📂 Projects API', () => {
   });
 
   // ─────────────────── POST /api/projects ───────────────────
+  /**
+   * Test Suite: Project Creation
+   * Verifies project metadata validation and ownership assignment.
+   */
   describe('POST /api/projects', () => {
     it('should create a new project when authenticated', async () => {
       mockPrisma.project.create.mockResolvedValue({
@@ -51,7 +71,7 @@ describe('📂 Projects API', () => {
 
       const res = await request(app)
         .post('/api/projects')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`) // Use Admin for write access
         .send({ title: 'New Project' });
 
       expect(res.status).toBe(201);
@@ -62,7 +82,7 @@ describe('📂 Projects API', () => {
     it('should return 400 if title is missing', async () => {
       const res = await request(app)
         .post('/api/projects')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({});
 
       expect(res.status).toBe(400);
@@ -91,7 +111,7 @@ describe('📂 Projects API', () => {
 
       const res = await request(app)
         .post('/api/projects/1/tasks')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({ title: 'Design the shark logo' });
 
       expect(res.status).toBe(201);
@@ -102,7 +122,7 @@ describe('📂 Projects API', () => {
     it('should return 400 if title is missing', async () => {
       const res = await request(app)
         .post('/api/projects/1/tasks')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({});
 
       expect(res.status).toBe(400);
@@ -111,7 +131,7 @@ describe('📂 Projects API', () => {
     it('should return 400 for invalid project ID', async () => {
       const res = await request(app)
         .post('/api/projects/abc/tasks')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({ title: 'Test' });
 
       expect(res.status).toBe(400);

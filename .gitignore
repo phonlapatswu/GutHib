@@ -21,3 +21,10 @@ build/
 # Logs
 npm-debug.log*
 yarn-debug.log*
+
+# Python & Temporary Files
+.venv/
+__pycache__/
+*.pptx
+!SharkTask_Engineering.pptx
+~$*

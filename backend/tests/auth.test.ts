@@ -8,9 +8,17 @@ jest.mock('../src/db');
 
 const mockPrisma = prisma as any;
 
+/**
+ * Integration Tests for Authentication API
+ * Uses Supertest to simulate HTTP requests and Mocks Prisma for data isolation.
+ */
 describe('🔐 Auth API', () => {
 
   // ─────────────────── POST /api/auth/register ───────────────────
+  /**
+   * Test Suite: User Registration
+   * Covers: Successful creation, conflict handling (409), and validation errors (400).
+   */
   describe('POST /api/auth/register', () => {
 
     it('should register a new user and return a JWT token', async () => {
@@ -73,6 +81,10 @@ describe('🔐 Auth API', () => {
   });
 
   // ─────────────────── POST /api/auth/login ───────────────────
+  /**
+   * Test Suite: User Login
+   * Covers: Valid credentials, non-existent users (401), and invalid passwords (401).
+   */
   describe('POST /api/auth/login', () => {
 
     it('should login with correct credentials and return a JWT token', async () => {
@@ -87,7 +99,7 @@ describe('🔐 Auth API', () => {
 
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ username: 'testuser', password: 'password123' });
+        .send({ email: 'test@example.com', password: 'password123' });
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('token');
@@ -99,7 +111,7 @@ describe('🔐 Auth API', () => {
 
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ username: 'ghost', password: 'password123' });
+        .send({ email: 'ghost@example.com', password: 'password123' });
 
       expect(res.status).toBe(401);
       expect(res.body.error).toMatch(/invalid/i);
@@ -116,7 +128,7 @@ describe('🔐 Auth API', () => {
 
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ username: 'testuser', password: 'wrongpass' });
+        .send({ email: 'test@example.com', password: 'wrongpass' });
 
       expect(res.status).toBe(401);
     });

@@ -4,6 +4,12 @@ import prisma from '../src/db';
 import jwt from 'jsonwebtoken';
 
 jest.mock('../src/db');
+jest.mock('../src/socket', () => ({
+  getIO: jest.fn(() => ({
+    to: jest.fn().mockReturnThis(),
+    emit: jest.fn()
+  }))
+}));
 
 const mockPrisma = prisma as any;
 
@@ -13,8 +19,16 @@ function makeToken(userId: number, role = 'Worker') {
   return jwt.sign({ user_id: userId, username: 'testuser', role }, JWT_SECRET, { expiresIn: '1h' });
 }
 
+/**
+ * Integration Tests for Tasks & Messaging API
+ * Verifies critical workflow: Status Transitions (Kanban) and Real-time Communication.
+ */
 describe('✅ Tasks API — Status Updates', () => {
 
+  /**
+   * Test Suite: Task Status Transitions
+   * Verifies date-timestamp injection for "In Progress" and "Closed" states.
+   */
   describe('PATCH /api/projects/:projectId/tasks/:taskId/status', () => {
 
     it('should update task status from Open to In_Progress', async () => {
@@ -25,13 +39,15 @@ describe('✅ Tasks API — Status Updates', () => {
         status: 'Open',
         started_at: null,
         completed_at: null,
+        project: { owner_id: 1 },
+        assignees: [{ user_id: 1 }] // Add mock assignees
       };
       mockPrisma.task.findFirst.mockResolvedValue(existingTask);
       mockPrisma.task.update.mockResolvedValue({ ...existingTask, status: 'In_Progress', started_at: new Date() });
 
       const res = await request(app)
         .patch('/api/projects/1/tasks/5/status')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({ status: 'In_Progress' });
 
       expect(res.status).toBe(200);
@@ -45,13 +61,15 @@ describe('✅ Tasks API — Status Updates', () => {
         status: 'In_Progress',
         started_at: new Date(),
         completed_at: null,
+        project: { owner_id: 1 },
+        assignees: [{ user_id: 1 }]
       };
       mockPrisma.task.findFirst.mockResolvedValue(existingTask);
       mockPrisma.task.update.mockResolvedValue({ ...existingTask, status: 'Closed', completed_at: new Date() });
 
       const res = await request(app)
         .patch('/api/projects/1/tasks/5/status')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({ status: 'Closed' });
 
       expect(res.status).toBe(200);
@@ -63,7 +81,7 @@ describe('✅ Tasks API — Status Updates', () => {
 
       const res = await request(app)
         .patch('/api/projects/99/tasks/5/status')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({ status: 'Closed' });
 
       expect(res.status).toBe(404);
@@ -72,7 +90,7 @@ describe('✅ Tasks API — Status Updates', () => {
     it('should return 400 for invalid status value', async () => {
       const res = await request(app)
         .patch('/api/projects/1/tasks/5/status')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({ status: 'DONE_AND_DUSTED' }); // Invalid enum
 
       expect(res.status).toBe(400);
@@ -81,7 +99,7 @@ describe('✅ Tasks API — Status Updates', () => {
     it('should return 400 for non-numeric task ID', async () => {
       const res = await request(app)
         .patch('/api/projects/1/tasks/notanumber/status')
-        .set('Authorization', `Bearer ${makeToken(1)}`)
+        .set('Authorization', `Bearer ${makeToken(1, 'Admin')}`)
         .send({ status: 'Closed' });
 
       expect(res.status).toBe(400);
@@ -97,16 +115,28 @@ describe('✅ Tasks API — Status Updates', () => {
   });
 });
 
+/**
+ * Test Suite: Messaging Engine
+ * Verifies message persistence and validation.
+ */
 describe('💬 Messages API', () => {
 
   describe('GET /api/messages', () => {
     it('should return list of messages when authenticated', async () => {
       mockPrisma.message.findMany.mockResolvedValue([
-        { message_id: 1, text: 'Hello team!', sender_id: 1, created_at: new Date(), sender: { username: 'testuser' } },
+        { 
+          message_id: 1, 
+          text: 'Hello team!', 
+          sender_id: 1, 
+          created_at: new Date(), 
+          sender: { username: 'testuser' },
+          project: { title: 'Shark Task' }
+        },
       ]);
+      mockPrisma.message.count.mockResolvedValue(1);
 
       const res = await request(app)
-        .get('/api/messages')
+        .get('/api/messages?project_id=1') // Add project_id query param
         .set('Authorization', `Bearer ${makeToken(1)}`);
 
       expect(res.status).toBe(200);
