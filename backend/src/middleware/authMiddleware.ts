@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_local_dev';
+const JWT_SECRET = process.env.JWT_SECRET || 'supersharktasksecret123';
 
 /**
  * Middleware: Validates JWT token from Authorization header (Bearer token)

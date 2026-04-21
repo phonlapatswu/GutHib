@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../db';
 import * as yup from 'yup';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_local_dev';
+const JWT_SECRET = process.env.JWT_SECRET || 'supersharktasksecret123';
 
 /**
  * Handles user registration
