@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 import prisma from '../db';
 import * as yup from 'yup';
 
+/**
+ * Fetches all active projects for the current user
+ * Filters by ownership and membership. Adjoined with completion stats and unread messages.
+ */
 export const getProjects = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.user_id;
@@ -57,6 +61,10 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
+/**
+ * Creates a new project and attaches the creator as a member
+ * Automatically handles deduplication of member IDs
+ */
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const schema = yup.object().shape({
@@ -99,6 +107,9 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+/**
+ * Sets project status to 'Archived' (Owner or Admin only)
+ */
 export const archiveProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.id as string, 10);
@@ -122,6 +133,9 @@ export const archiveProject = async (req: Request, res: Response): Promise<void>
   }
 };
 
+/**
+ * Permanently deletes a project and all its associations (Owner or Admin only)
+ */
 export const deleteProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.id as string, 10);
@@ -142,6 +156,9 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+/**
+ * Retrieves the list of all members assigned to a specific project
+ */
 export const getProjectMembers = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.id as string, 10);
@@ -159,6 +176,9 @@ export const getProjectMembers = async (req: Request, res: Response): Promise<vo
   }
 };
 
+/**
+ * Adds a new member to the project by their username
+ */
 export const addMember = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.id as string, 10);
@@ -184,6 +204,9 @@ export const addMember = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+/**
+ * Removes a member from the project (cannot remove owner)
+ */
 export const removeMember = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.id as string, 10);
