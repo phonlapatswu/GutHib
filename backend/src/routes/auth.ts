@@ -4,11 +4,11 @@ import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Public routes
-router.post('/register', register);
-router.post('/login', login);
+// Public routes (No token required)
+router.post('/register', register); // User registration
+router.post('/login', login);       // User login & JWT issuance
 
-// Protected routes
-router.get('/me', authenticateToken, getMe);
+// Protected routes (Valid JWT required)
+router.get('/me', authenticateToken, getMe); // Fetch current session user
 
 export default router;
