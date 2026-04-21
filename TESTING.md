@@ -1,51 +1,51 @@
-# 🦈 Shark Task: Quality Assurance & Testing Report
+# 🦈 Shark Task: รายงานการประกันคุณภาพและการทดสอบ (Quality Assurance & Testing)
 
-This document outlines the testing strategy, frameworks, and results for the Shark Task platform. We utilize **Industry Standard** testing practices to ensure system reliability and security.
+เอกสารฉบับนี้อธิบายถึงกลยุทธ์การทดสอบ เฟรมเวิร์กที่ใช้ และผลลัพธ์การทดสอบสำหรับแพลตฟอร์ม Shark Task เราใช้แนวทางปฏิบัติมาตรฐานอุตสาหกรรมเพื่อให้แน่ใจว่าระบบมีความน่าเชื่อถือและปลอดภัย
 
-## 🛠 Testing Frameworks
-- **Jest**: The primary testing runner for modern JavaScript/TypeScript.
-- **Supertest**: Library for testing HTTP servers without a live network connection.
-- **ts-jest**: TypeScript integration for Jest.
+## 🛠 เฟรมเวิร์กที่ใช้ในการทดสอบ (Testing Frameworks)
+- **Jest**: เครื่องมือหลักสำหรับการรันการทดสอบ (Test Runner) ในโครงการ JavaScript/TypeScript สมัยใหม่
+- **Supertest**: ไลบรารีสำหรับจำลองการทำ HTTP Request ไปยัง Server โดยไม่ต้องเปิดเซิร์ฟเวอร์จริง
+- **ts-jest**: ตัวช่วยที่ทำให้ Jest สามารถทำงานร่วมกับ TypeScript ได้อย่างสมบูรณ์
 
-## 🎯 Testing Strategy
-We follow a **Black-box Integration Testing** approach:
-1. **Request Simulation**: Supertest sends real HTTP requests to the Express application.
-2. **Data Mocking**: Instead of a live database, we use **Manual Mocks** for the Prisma Client. This ensures:
-   - Tests are **Fast** (no DB sync required).
-   - Tests are **Deterministic** (same result every time).
-   - **Data Isolation** (tests don't mess up production data).
+## 🎯 กลยุทธ์การทดสอบ (Testing Strategy)
+เราใช้แนวทาง **Black-box Integration Testing** (การทดสอบการทำงานร่วมกัน):
+1. **การจำลอง Request**: ใช้ Supertest ส่ง HTTP request จริงไปยัง Express Application
+2. **การจำลองข้อมูล (Mocking Data)**: แทนที่จะใช้ฐานข้อมูลจริง เราใช้การทำ **Manual Mocks** สำหรับ Prisma Client ซึ่งช่วยให้:
+   - การทดสอบทำงานได้ **รวดเร็ว** (ไม่ต้องรอเชื่อมต่อ DB)
+   - ผลการทดสอบมีความ **แม่นยำและคงที่** (Deterministic)
+   - **แยกส่วนข้อมูล** (การทดสอบจะไม่ไปกระทบหรือแก้ไขข้อมูลจริงในฐานข้อมูล)
 
-## 📊 Test Coverage Summary
+## 📊 สรุปผลการทดสอบ (Test Coverage Summary)
 
-| Area | Suite | Test Cases | Status |
+| ส่วนที่ทดสอบ | ไฟล์ทดสอบ | จำนวนเคส | สถานะ |
 | :--- | :--- | :---: | :--- |
-| **Authentication** | `auth.test.ts` | 9 | ✅ PASS |
-| **Projects** | `projects.test.ts` | 8 | ✅ PASS |
-| **Tasks & Status** | `tasks.test.ts` | 6 | ✅ PASS |
-| **Messaging** | `tasks.test.ts` | 5 | ✅ PASS |
-| **System Health** | `auth.test.ts` | 1 | ✅ PASS |
-| **Total** | | **29** | **✅ 100% Pass** |
+| **ระบบยืนยันตัวตน (Auth)** | `auth.test.ts` | 9 | ✅ ผ่าน (PASS) |
+| **การจัดการโปรเจกต์** | `projects.test.ts` | 8 | ✅ ผ่าน (PASS) |
+| **สถานะงาน (Tasks)** | `tasks.test.ts` | 6 | ✅ ผ่าน (PASS) |
+| **การส่งข้อความ (Messaging)** | `tasks.test.ts` | 5 | ✅ ผ่าน (PASS) |
+| **ความพร้อมของระบบ** | `auth.test.ts` | 1 | ✅ ผ่าน (PASS) |
+| **รวมทั้งหมด** | | **29** | **✅ ผ่าน 100%** |
 
 ---
 
-## 🚀 How to Run Tests
+## 🚀 วิธีการรันการทดสอบ
 
-### Prerequisites
-Ensure all dependencies are installed in the `backend` directory:
+### ความต้องการเบื้องต้น
+ตรวจสอบให้แน่ใจว่าติดตั้ง dependencies ทั้งหมดในโฟลเดอร์ `backend` เรียบร้อยแล้ว:
 ```bash
 cd backend
 npm install
 ```
 
-### Running the Test Suite
-Execute the following command to run all tests with a verbose output:
+### การรันชุดคำสั่งทดสอบ
+รันคำสั่งต่อไปนี้เพื่อดูผลการทดสอบอย่างละเอียด:
 ```bash
 npm test
 ```
 
 ---
 
-## 🔍 Sample Test Result
+## 🔍 ตัวอย่างผลการทดสอบ (Sample Result)
 ```text
 PASS tests/tasks.test.ts
 PASS tests/auth.test.ts
@@ -60,15 +60,15 @@ Ran all test suites.
 
 ---
 
-## 🧠 Technical Highlights for Presentation
+## 🧠 ประเด็นทางเทคนิคสำหรับการนำเสนอ (Technical Highlights)
 
-### 1. Permission Logic Validation (RBAC)
-We test that a `Worker` cannot create projects or tasks (returns `403 Forbidden`). Only `Manager` or `Admin` roles have authorization for these actions.
+### 1. การตรวจสอบสิทธิ์การเข้าถึง (RBAC)
+เราทดสอบว่าผู้ใช้ทั่วไป (`Worker`) จะไม่สามารถสร้างโปรเจกต์หรือสร้างงานได้ (ระบบจะตอบกลับเป็น `403 Forbidden`) โดยมีเพียงบทบาท `Manager` หรือ `Admin` เท่านั้นที่มีสิทธิ์เข้าถึงส่วนนี้
 
-### 2. State Transition Tracking
-Our tests verify that when a task status changes:
-- `In_Progress`: Automatically sets the `started_at` timestamp.
-- `Closed`: Automatically sets the `completed_at` timestamp.
+### 2. ตรรกะการเปลี่ยนสถานะ (State Transition)
+การทดสอบของเรายืนยันว่าเมื่อสถานะงานเปลี่ยนไป:
+- `In_Progress`: ระบบจะบันทึกเวลาที่เริ่มงาน (`started_at`) ให้โดยอัตโนมัติ
+- `Closed`: ระบบจะบันทึกเวลาที่งานเสร็จสิ้น (`completed_at`) ให้โดยอัตโนมัติ
 
-### 3. Real-time Message Decoupling
-We use **Jest Mocks** for the Socket.io engine to verify that messages are triggered without needing a live WebSocket server during the test run.
+### 3. การแยกส่วนระบบ Real-time
+เราใช้ **Jest Mocks** สำหรับระบบ Socket.io เพื่อตรวจสอบว่ามีการส่งเหตุการณ์ (Events) ต่างๆ เกิดขึ้นจริงหรือไม่ โดยไม่จำเป็นต้องเปิด WebSocket Server ในระหว่างการทดสอบ
