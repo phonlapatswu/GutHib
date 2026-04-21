@@ -1,3 +1,7 @@
+/**
+ * Database Layer: Prisma Client Initialization
+ * Uses @prisma/adapter-pg for enhanced connection pooling and performance.
+ */
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
