@@ -12,6 +12,7 @@ interface ProfileData {
 }
 
 export default function ProfilePage() {
+  // --- State for Data and Forms ---
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [editForm, setEditForm] = useState({ username: '', email: '' });
@@ -23,14 +24,20 @@ export default function ProfilePage() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+  /**
+   * Fetches user profile data and initializes form values
+   */
   useEffect(() => {
     const init = async () => {
       try {
         const res = await api.get('/users/me');
         setProfile(res.data);
         setEditForm({ username: res.data.username, email: res.data.email });
-      } catch (e) { console.error(e); }
-      finally { setIsLoading(false); }
+      } catch (e) { 
+        console.error("Failed to load user profile", e); 
+      } finally { 
+        setIsLoading(false); 
+      }
     };
     init();
   }, []);
