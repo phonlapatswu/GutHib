@@ -13,6 +13,10 @@ interface Task {
   assignees: any[];
 }
 
+interface GanttTimelineProps {
+  tasks: Task[];
+}
+
 /**
  * GanttTimeline: A custom coordinate-based project timeline rendering engine.
  * Uses date-fns for interval calculation and CSS relative/absolute positioning
