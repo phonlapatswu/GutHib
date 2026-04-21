@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 import prisma from '../db';
 import { task_status, task_priority } from '@prisma/client';
 
+/**
+ * Updates the status of a specific task within a project
+ * Handles date recording for In_Progress and Closed states
+ */
 export const updateTaskStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.projectId as string, 10);
@@ -68,6 +72,10 @@ export const updateTaskStatus = async (req: Request, res: Response): Promise<voi
   }
 };
 
+/**
+ * Creates a new task within a project and assigns users
+ * Only Managers/Admins can assign tasks during creation
+ */
 export const createTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectId = parseInt(req.params.projectId as string, 10);
@@ -122,6 +130,9 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+/**
+ * Retrieves detailed information for a specific task including assignees and history
+ */
 export const getTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const taskId = parseInt(req.params.taskId as string, 10);
@@ -162,6 +173,9 @@ export const getTask = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+/**
+ * Updates task details including title, description, and assignees
+ */
 export const updateTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const taskId = parseInt(req.params.taskId as string, 10);
@@ -214,6 +228,9 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+/**
+ * Deletes a task from the project (Manager/Admin only)
+ */
 export const deleteTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const taskId = parseInt(req.params.taskId as string, 10);
