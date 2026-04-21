@@ -2,6 +2,11 @@ import http from 'http';
 import app from './app';
 import { initSocket } from './socket';
 
+/**
+ * SharkTask Backend Entry Point
+ * Initializes HTTP Server, Socket.io Engine, and starts listening on PORT.
+ */
+
 const PORT = process.env.PORT || 3001;
 
 const server = http.createServer(app);
