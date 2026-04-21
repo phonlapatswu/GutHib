@@ -1,6 +1,10 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
+/**
+ * Global API Client (Axios Instance)
+ * Configured with baseURL and automatic Authorization header injection.
+ */
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
   headers: {
@@ -8,7 +12,12 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to attach the JWT token to outgoing requests
+/**
+ * Request Interceptor: Centralized Security
+ * This interceptor intercepts every outgoing request and injects the JWT token
+ * if it exists in the browser cookies. This ensures all authenticated routes 
+ * work seamlessly without manual header management.
+ */
 api.interceptors.request.use(
   (config) => {
     const token = Cookies.get('token');
