@@ -3,6 +3,10 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_local_dev';
 
+/**
+ * Middleware: Validates JWT token from Authorization header (Bearer token)
+ * If valid, attaches user payload to req.user and proceeds.
+ */
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
