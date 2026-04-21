@@ -1,5 +1,11 @@
 # 🦈 Shark Task: การจัดการโปรเจกต์ที่ "คม" กว่าที่เคย
 
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.dot_io&logoColor=white)
+
 **Shark Task** คือแพลตฟอร์มบริหารจัดการงานยุคใหม่ที่เน้นความรวดเร็ว แม่นยำ และทรงพลัง เราออกแบบระบบมาภายใต้แนวคิด "GitHub สำหรับทุกคน" เพื่อมอบเครื่องมือระดับสูงให้แก่คนทำงานทุกสายอาชีพผ่านอินเตอร์เฟสที่ทันสมัยและใช้งานง่ายที่สุด
 
 ---
