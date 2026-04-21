@@ -13,28 +13,34 @@ interface Task {
   assignees: any[];
 }
 
-interface GanttTimelineProps {
-  tasks: Task[];
-}
-
+/**
+ * GanttTimeline: A custom coordinate-based project timeline rendering engine.
+ * Uses date-fns for interval calculation and CSS relative/absolute positioning
+ * to map dates to UI grid columns.
+ */
 export default function GanttTimeline({ tasks }: GanttTimelineProps) {
   const today = startOfToday();
   
   // Calculate date range for the chart
+  /**
+   * Calculate date range for the chart bounding box.
+   * Auto-adjusts view based on the earliest and latest task dates in the project.
+   */
   const { startDate, endDate, daysCount, dateHeader } = useMemo(() => {
+    // Collect all unique task dates for range determination
     const allDates = tasks.flatMap(t => [
       t.planned_start_date ? new Date(t.planned_start_date) : null,
       t.due_date ? new Date(t.due_date) : null
     ]).filter(d => d !== null) as Date[];
     
     let start = startOfWeek(today);
-    let end = endOfWeek(addDays(today, 14)); // Default 3 weeks view
+    let end = endOfWeek(addDays(today, 14)); // Default fallback: 3 weeks view
 
     if (allDates.length > 0) {
       const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
       const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
-      start = startOfWeek(addDays(minDate, -7));
-      end = endOfWeek(addDays(maxDate, 7));
+      start = startOfWeek(addDays(minDate, -7)); // 1 week buffer at start
+      end = endOfWeek(addDays(maxDate, 7));    // 1 week buffer at end
     }
 
     const interval = eachDayOfInterval({ start, end });
@@ -46,6 +52,9 @@ export default function GanttTimeline({ tasks }: GanttTimelineProps) {
     };
   }, [tasks, today]);
 
+  /**
+   * Helper: Calculates day offset relative to chart anchor date
+   */
   const getDayOffset = (date: Date) => differenceInDays(date, startDate);
   
   return (
