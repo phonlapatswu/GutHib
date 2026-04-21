@@ -236,6 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-3 bg-black text-white rounded-2xl shadow-lg active:scale-95 transition-all"
           >
+            {/* MOBILE: Toggle sidebar visibility on smaller screens (<768px) */}
             {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
           
