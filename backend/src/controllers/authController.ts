@@ -6,6 +6,10 @@ import * as yup from 'yup';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_local_dev';
 
+/**
+ * Handles user registration
+ * @route POST /api/auth/register
+ */
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const schema = yup.object().shape({
@@ -68,6 +72,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+/**
+ * Handles user login and JWT issuance
+ * @route POST /api/auth/login
+ */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const schema = yup.object().shape({
@@ -119,6 +127,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+/**
+ * Retrieves current logged-in user profile
+ * @route GET /api/auth/me
+ */
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
     // The user object is injected by the authMiddleware
