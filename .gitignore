@@ -27,4 +27,5 @@ yarn-debug.log*
 __pycache__/
 *.pptx
 !SharkTask_Engineering.pptx
+!SharkTask_Final_Engineering.pptx
 ~$*
