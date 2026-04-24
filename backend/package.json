@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "test": "jest --forceExit"
+    "test": "jest --forceExit",
+    "build": "tsc -p tsconfig.build.json",
+    "profile:static": "npm run build && plato -r -d plato-report dist/",
+    "profile:open": "open plato-report/index.html"
   },
   "keywords": [],
   "author": "",

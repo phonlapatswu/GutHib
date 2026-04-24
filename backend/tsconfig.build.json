@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "commonjs",
+    "target": "es6",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": false,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "src/__mocks__/**",
+    "tests/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
